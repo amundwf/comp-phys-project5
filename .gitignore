@@ -1,0 +1,9 @@
+*.o
+*.out
+*.exe
+*.csv
+*.txt
+**testing.py
+**testing.cpp
+
+py_codes/__pycache__/
