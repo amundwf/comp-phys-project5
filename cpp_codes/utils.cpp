@@ -302,3 +302,30 @@ void diffusion1D(){
     implicitScheme(n, tFinal, tStep);
     crankNicolsonScheme(n, tFinal, tStep);
 }
+
+void diffusion2D(){
+     //  We define the step size for a square lattice with n+1 points
+               double h = (xmax-xmin)/(n+1);
+               double L = xmax-xmin;   // The length of the lattice
+        //  We allocate space for the vector u and the temporary vector to
+        //  be upgraded in every iteration
+               mat  u( n+1, n+1);  // using Armadillo to define matrices
+               mat  u_temp( n+1, n+1);  // This is the temporary value
+               u = 0.  //  This is also our initial guess for all unknown values
+        //  We need to set up the  boundary conditions.  Specify for various cases
+            .....
+        //  The iteration algorithm starts here
+               iterations = 0;
+               while( (iterations <= max_iter) && ( diff > 0.00001) ){
+                  u_temp = u; diff = 0.;
+                  for (j = 1; j<= n,j++){
+                      for(l = 1; l <= n; l++){
+                         u(j,l) = 0.25*(u_temp(j+1,l)+u_temp(j-1,l)+ &
+                                       u_temp(j,l+1)+u_temp(j,l-1));
+                         diff += fabs(u_temp(i,j)-u(i,j));
+                      }
+                  }
+                  iterations++;
+                  diff /= pow((n),2.0); 
+               }   // end while loop
+}
