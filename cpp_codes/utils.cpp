@@ -34,25 +34,31 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     diagonal matrix.
 
     Inputs:
-        alpha: double, will give diagonal elements a, b 
-        n: integer, number of grid points
-        x_0: double, point 0
-        x_n: double, point n+1
-        h: double, step size in spacial dimension.
+        a: double, the off diagonal element.
+        b: double, the diagonal element.
+        n: integer, number of grid points. There are actually n+1 grid points. 
+        u: arma::vec, the input vector(n+1).
+        verbose: bool, if you want to print out lots of stuff. 
     Outputs:
-        v: double, solution of size n+1 
+        unew: arma::vec, solution size(n+1)
     */
     
+    // I could use u but G is more similar to the previous code.
     vec G = u;
     vec B = vec(n+1);
     vec unew = vec(n+1);
+    // Set the first element of B.
     B[0] = b;
+    // Need the last element of B[n] for backward sub.
+    B[n] = b;
 
+    // Printing if verbose.
     if (verbose==true){
-            cout << "\nForward substitution... "<< endl;
-        }
+        cout << "\nForward substitution... "<< endl;
+    }
     // Forward substitution:
-    for (int i=1; i < n; i++) { // Start at index 2, or third row. up to n-1.
+    // Start at index 2, up to n-1. Don't touch n. 
+    for (int i=1; i < n; i++) { 
         double factorDiv = B[i-1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -60,50 +66,48 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
         B[i] = b - a*factor;
         G[i] = G[i] - G[i-1]*factor;
 
+        // Printing if verbose.
         if (verbose==true){
             cout << "B[i] is: "<< B[i] << endl;
             cout << "G[i] is: "<< G[i] << endl;
         }
     }
-    // Need the last element of B[n] for backward sub.
-    B[n] = b;
-
+    
     // Just in case set the boundary condition maunally.
     unew[n] = 1.0; unew[0] = 0.0;
     G[n] = 1.0; G[0] = 0.0;
 
+    // Printing if verbose.
     if (verbose==true){
-            cout << "\nBackward substitution... "<< endl;
-        }
+        cout << "\nBackward substitution... "<< endl;
+    }
     // Backward substitution:
-    for (int i=n-1; i > 0; i--) { // Start at row n-1 (index n-2), end at first row (row 1, index 0).
+    // Start at index n-1, end at index 1. Dont touch index 0 or n. 
+    for (int i=n-1; i > 0; i--) { 
         double factorDiv = B[i+1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
         // All upper diagonal elements gets eliminated.
-        // Final element in the row:
-        G[i] = G[i] - G[i+1]*factor; //in very first run i.e t=1 then G[i+1] = G[n]
+        
+        // In very first run i.e t=1 then G[i+1] = G[n], so we acces n but dont change it. 
+        G[i] = G[i] - G[i+1]*factor;
 
+        // Printing if verbose.
         if (verbose==true){
             cout << "G[i] is: "<< G[i] << endl;
         }
     }
-    if (verbose==true){
-            cout << "\nScaling... "<< endl;
-        }
     // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
     // solution for v:
     for (int i=1; i < n; i++) {
-        //std::cout << "g[i]: " << g[i] << std::endl;
-        //std::cout << "b[i]: " << b[i] << std::endl;
         unew[i] = G[i]/B[i];
 
         if (verbose==true){
-            cout << "unew[i+1]: "<< unew[i+1] << endl;
+            cout << "\nScaling... "<< endl;
+            cout << "unew: "<< unew[i+1] << endl;
         }
     }
-    
-    
+    // Return the solution arma::vec unew.
     return unew;
 }
 
@@ -122,7 +126,7 @@ void implicitScheme(int n, int tFinal, double tStep){
     u(n) = unew(n) = u_n;
 
     // Evaluate Delta x.
-    double xStep = (u(n)- u(0)) / n;
+    double xStep = (u(n) - u(0)) / n;
 
     // Find Delta t and the number of time steps to get to tFinal.
     int tSteps = int(tFinal/ tStep);
@@ -185,7 +189,7 @@ void explicitScheme(int n, int tFinal){
     u(n) = unew(n) = 1.0;
 
     // Evaluate Delta x.
-    double xStep = (u(n)- u(0)) / n;
+    double xStep = (u(n) - u(0)) / n;
 
     // Find Delta t and the number of time steps to get to tFinal.
     // Stability criteria, constrains t step. 
@@ -278,8 +282,9 @@ void crankNicolsonScheme(int n, int tFinal, double tStep){
         // Run Thomas algo
         vec unew = ThomasAlgorithm(n, r, a, b, verbose);
 
-        //  note that the boundaries are not changed.
+        // Add data to results. 
         results(t, span(0,n)) = unew.t();
+        // Reset u for the next time step.
         u = unew;
     }  
     cout << "saving results..." << endl;
