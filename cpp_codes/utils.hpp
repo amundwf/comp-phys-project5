@@ -11,8 +11,14 @@ void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, s
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
-void explicitScheme(int n);
+void explicitScheme(int n, int tFinal);
 
-void task_5c();
+void implicitScheme(int n, int tFinal, double tStep);
+
+void crankNicolsonScheme(int n, int tFinal, double tStep);
+
+void diffusion1D();
+
+arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
 #endif
