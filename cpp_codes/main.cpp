@@ -7,7 +7,7 @@ using namespace arma;
 
 int main(){
     
-    task_5c();
+    diffusion1D();
 
     return 0;
 }

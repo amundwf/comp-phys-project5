@@ -28,68 +28,154 @@ void writeGeneralMatrixToCSV_noLabels(mat results, string filename, string direc
     results.save(filePath, csv_ascii);
 }
 
-/*
-double* Thomas_algo(int n, double x_0, double x_np1, int a, int b) {
-     Returns solution to the special algorithm.
 
-    This function calculates v for the general case, i.e a 
-    tri-diagonal matrix, where as opposed to the general case
-    a and c are equal and all elements along the diagonal and 
-    off-diagonals are identical. 
+vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
+    /* Returns solution to the Thomas algorith algorithm for a tri-
+    diagonal matrix.
+
     Inputs:
-        a, b: integers, diagonal elements
-        n: interger, number of points
+        alpha: double, will give diagonal elements a, b 
+        n: integer, number of grid points
         x_0: double, point 0
-        x_np1: double, point n+1
+        x_n: double, point n+1
+        h: double, step size in spacial dimension.
     Outputs:
         v: double, solution of size n+1 
+    */
+    
+    vec G = u;
+    vec B = vec(n+1);
+    vec unew = vec(n+1);
+    B[0] = b;
 
-    // Calculate h. Using long double for increased precision.
-    double h = (x_np1-x_0)/(n+1);
-    double hh = h*h;
-    double *fList = new double[n+2]; double *g = new double[n+2]; 
-    double *xList = new double[n+2]; double *v = new double[n+2];
-    double *b_sub = new double[n+2]; double *g_sub = new double[n+2];
-
-    // Create xList:
-    xList[0] = x_0; // End points.
-    xList[n+1] = x_np1;
-
-    fList[0] = x_0; // End points.
-    fList[n+1] = x_np1;
-    for (int i=1; i<=n; i++) { xList[i] = x_0 + i*h; }    // Step size h between points.
-
-    for (int i=0; i<=n+1; i++) {
-        fList[i] = f(xList[i]);
-        g[i] = hh * fList[i];
-    }
-
-    //clock_t start, finish; // declare start and final time
-    //start = clock();
-
-    // Forward substitution
-    b_sub[1] = b;
-    for (int i=2; i<=n+1; i++){
-        b_sub[i] = (i+1)/i;
-        g_sub[i] = g[i] + (g_sub[i-1]/b_sub[i-1]);
-        } 
-    v[n] = g_sub[n] / b_sub[n];
-
-    // Backward substitution
-    for (int i=n-1; i>0; i--){
-        v[i] = (g_sub[i] + v[i+1])/b_sub[i];
+    if (verbose==true){
+            cout << "\nForward substitution... "<< endl;
         }
-            
-    //finish = clock();
+    // Forward substitution:
+    for (int i=1; i < n; i++) { // Start at index 2, or third row. up to n-1.
+        double factorDiv = B[i-1];
+        double factorMult = a;
+        double factor = factorMult/factorDiv;
 
-    delete [] xList; delete [] fList; delete [] g;
-    delete [] b_sub; delete [] g_sub;
+        B[i] = b - a*factor;
+        G[i] = G[i] - G[i-1]*factor;
 
-    return v;//, ((finish - start)/CLOCKS_PER_SEC);
+        if (verbose==true){
+            cout << "B[i] is: "<< B[i] << endl;
+            cout << "G[i] is: "<< G[i] << endl;
+        }
+    }
+    // Need the last element of B[n] for backward sub.
+    B[n] = b;
+
+    // Just in case set the boundary condition maunally.
+    unew[n] = 1.0; unew[0] = 0.0;
+    G[n] = 1.0; G[0] = 0.0;
+
+    if (verbose==true){
+            cout << "\nBackward substitution... "<< endl;
+        }
+    // Backward substitution:
+    for (int i=n-1; i > 0; i--) { // Start at row n-1 (index n-2), end at first row (row 1, index 0).
+        double factorDiv = B[i+1];
+        double factorMult = a;
+        double factor = factorMult/factorDiv;
+        // All upper diagonal elements gets eliminated.
+        // Final element in the row:
+        G[i] = G[i] - G[i+1]*factor; //in very first run i.e t=1 then G[i+1] = G[n]
+
+        if (verbose==true){
+            cout << "G[i] is: "<< G[i] << endl;
+        }
+    }
+    if (verbose==true){
+            cout << "\nScaling... "<< endl;
+        }
+    // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
+    // solution for v:
+    for (int i=1; i < n; i++) {
+        //std::cout << "g[i]: " << g[i] << std::endl;
+        //std::cout << "b[i]: " << b[i] << std::endl;
+        unew[i] = G[i]/B[i];
+
+        if (verbose==true){
+            cout << "unew[i+1]: "<< unew[i+1] << endl;
+        }
+    }
+    
+    
+    return unew;
 }
-*/
 
-void explicitScheme(int n){
+void implicitScheme(int n, int tFinal, double tStep){
+    // First we set initialise the new and old vectors
+    // Set boundary conditions.
+    // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
+    vec u = vec(n+1, fill::zeros);
+    vec unew = vec(n+1, fill::zeros);
+
+    // Set the boundary conditions.
+    double u_0 = 0.0;
+    double u_n = 1.0;
+
+    u(0) = unew(0) = u_0;
+    u(n) = unew(n) = u_n;
+
+    // Evaluate Delta x.
+    double xStep = (u(n)- u(0)) / n;
+
+    // Find Delta t and the number of time steps to get to tFinal.
+    int tSteps = int(tFinal/ tStep);
+
+    // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
+    double alpha = tStep / (xStep*xStep);
+
+    cout << "n is: " << n <<endl;
+    cout << "xStep is: " << xStep <<endl;
+    cout << "tFinal is: " << tFinal <<endl;
+    cout << "tStep is: " << tStep <<endl;
+    cout << "tSteps is: " << tSteps <<endl;
+    cout << "alpha is: " << alpha << endl;
+    
+    // Set up the table to store solution at all time steps.
+    mat results = mat(tSteps+1, n+1);
+
+    // Add initial results to matrix.
+    results(0, span(0,n)) = u.t();
+
+    cout << "Initial u vec added to matrix" <<endl;
+    // Time integration
+
+    double b = 1 + 2*alpha;
+    double a = -alpha;
+    double hh = xStep*xStep;
+    u = u*hh;
+    cout << "Running Thomas algo for A^-1." << endl;
+    
+    bool verbose = true;
+    for (int t = 1; t < 4; t++) {
+        cout << "\nt is: " << t << endl;
+        vec unew = ThomasAlgorithm(n, u, a, b, verbose);
+        //  note that the boundaries are not changed.
+        results(t, span(0,n)) = unew.t();
+        u = unew;
+    }  
+    verbose = false;
+    for (int t = 4; t <= tSteps; t++) {
+        
+        vec unew = ThomasAlgorithm(n, u, a, b, verbose);
+        //  note that the boundaries are not changed.
+        results(t, span(0,n)) = unew.t();
+        u = unew;
+    }  
+    cout << "saving..." << endl;
+    // Save the results.
+        string directory = "../results/5c/";
+        string filename = "Implicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+        writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
+}
+
+void explicitScheme(int n, int tFinal){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
@@ -102,10 +188,10 @@ void explicitScheme(int n){
     double xStep = (u(n)- u(0)) / n;
 
     // Find Delta t and the number of time steps to get to tFinal.
-    int tFinal = 10;
     // Stability criteria, constrains t step. 
     double tStep = xStep*xStep/2;
-    int tSteps = int(tFinal/ tStep);
+    // Round upwards.
+    int tSteps = ceil(tFinal/ tStep);  
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
@@ -132,15 +218,82 @@ void explicitScheme(int n){
         }
         //  note that the boundaries are not changed.
         results(t, span(0,n)) = unew.t();
+        u = unew;
     }  
     cout << "saving..." << endl;
     // Save the results.
         string directory = "../results/5c/";
-        string filename = "N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+        string filename = "Explicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
-void task_5c(){
-    int n = 100;
-    explicitScheme(n);
+void crankNicolsonScheme(int n, int tFinal, double tStep){
+    // First we set initialise the new and old vectors
+    // Set boundary conditions.
+    // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
+    vec u = vec(n+1, fill::zeros);
+    vec r = vec(n+1, fill::zeros);
+    vec unew = vec(n+1, fill::zeros);
+    u(0) = unew(0) = 0.0;
+    u(n) = unew(n) = 1.0;
+
+    // Evaluate Delta x.
+    double xStep = (u(n)- u(0)) / n;
+    // Find Delta t and the number of time steps to get to tFinal.
+
+    int tSteps = int(tFinal/ tStep);
+
+    // Evaluate alpha , i.e Delta t / (Delta x * Delta x). and the diagonals. 
+    double alpha = tStep / (xStep*xStep);
+    double a = - alpha;
+    double b = 2 + 2*alpha;
+    double hh = xStep*xStep;
+
+    // Need to scale by xStep*xStep.
+    u = u*hh;
+
+    cout << "n is: " << n <<endl;
+    cout << "xStep is: " << xStep <<endl;
+    cout << "tFinal is: " << tFinal <<endl;
+    cout << "tStep is: " << tStep <<endl;
+    cout << "tSteps is: " << tSteps <<endl;
+    
+    // Set up the table to store solution at all time steps.
+    mat results = mat(tSteps+1, n+1);
+
+    // Add initial results to matrix.
+    results(0, span(0,n)) = u.t();
+
+    bool verbose = false;
+    // Time integration
+    cout << "Running for all t..." << endl;
+    for (int t = 1; t <= tSteps; t++) {
+        // Calculate the right hand side for CN. 
+        for (int i = 1; i < n; i++) {
+        	r(i) = alpha*u(i-1) + (2 - 2*alpha)*u(i) + alpha*u(i+1);
+        }
+        r(0) = 0.0;
+        r(n) = 1.0;
+
+        // Run Thomas algo
+        vec unew = ThomasAlgorithm(n, r, a, b, verbose);
+
+        //  note that the boundaries are not changed.
+        results(t, span(0,n)) = unew.t();
+        u = unew;
+    }  
+    cout << "saving results..." << endl;
+    // Save the results.
+    string directory = "../results/5c/";
+    string filename = "CrankNicolson_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+    writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
+}
+
+void diffusion1D(){
+    int n = 10;
+    int tFinal = 10; 
+    double tStep = 0.005;
+    explicitScheme(n, tFinal);
+    implicitScheme(n, tFinal, tStep);
+    crankNicolsonScheme(n, tFinal, tStep);
 }
