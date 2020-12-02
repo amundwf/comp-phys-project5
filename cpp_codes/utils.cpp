@@ -2,6 +2,7 @@
 #include <iostream>
 #include <armadillo>
 #include <fstream>
+#include <iomanip> // Needed for set precision. 
 
 using namespace std;
 using namespace arma;
@@ -174,7 +175,7 @@ void implicitScheme(int n, int tFinal, double tStep){
     }  
     cout << "saving..." << endl;
     // Save the results.
-        string directory = "../results/5c/";
+        string directory = "../results/1D_diffusion/";
         string filename = "Implicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -226,7 +227,7 @@ void explicitScheme(int n, int tFinal){
     }  
     cout << "saving..." << endl;
     // Save the results.
-        string directory = "../results/5c/";
+        string directory = "../results/1D_diffusion/";
         string filename = "Explicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -289,7 +290,7 @@ void crankNicolsonScheme(int n, int tFinal, double tStep){
     }  
     cout << "saving results..." << endl;
     // Save the results.
-    string directory = "../results/5c/";
+    string directory = "../results/1D_diffusion/";
     string filename = "CrankNicolson_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -304,28 +305,112 @@ void diffusion1D(){
 }
 
 void diffusion2D(){
-     //  We define the step size for a square lattice with n+1 points
-               double h = (xmax-xmin)/(n+1);
-               double L = xmax-xmin;   // The length of the lattice
-        //  We allocate space for the vector u and the temporary vector to
-        //  be upgraded in every iteration
-               mat  u( n+1, n+1);  // using Armadillo to define matrices
-               mat  u_temp( n+1, n+1);  // This is the temporary value
-               u = 0.  //  This is also our initial guess for all unknown values
-        //  We need to set up the  boundary conditions.  Specify for various cases
-            .....
-        //  The iteration algorithm starts here
-               iterations = 0;
-               while( (iterations <= max_iter) && ( diff > 0.00001) ){
-                  u_temp = u; diff = 0.;
-                  for (j = 1; j<= n,j++){
-                      for(l = 1; l <= n; l++){
-                         u(j,l) = 0.25*(u_temp(j+1,l)+u_temp(j-1,l)+ &
-                                       u_temp(j,l+1)+u_temp(j,l-1));
-                         diff += fabs(u_temp(i,j)-u(i,j));
-                      }
-                  }
-                  iterations++;
-                  diff /= pow((n),2.0); 
-               }   // end while loop
+    int Npoints = 40;
+    int Tpoints = 40;
+    double ExactSolution;
+    double dx = 1.0/(Npoints-1);
+    double dt = 0.25*dx*dx;
+    double tFinal = Tpoints * dt;
+    double tolerance = 1.0e-14;
+    mat A = zeros<mat>(Npoints,Npoints);
+    mat q = zeros<mat>(Npoints,Npoints);
+    cube results = cube(Npoints, Npoints, Tpoints);
+
+    // setting up an additional source term. 
+    // This must to the initial state by add heat at some spots.
+    // For t=0
+    for(int i = 0; i < Npoints; i++){
+        for(int j = 0; j < Npoints; j++){
+            q(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
+        }
+    }
+    // Store initial conditions. 
+    results(span::all, span::all, span(0)) = q;
+
+    // Loop over time.
+    for( int t = 1; t < Tpoints; t++){
+
+        int itcount = JacobiSolver(Npoints,dx,dt,A,q,tolerance);
+
+        // Store A in cube results.
+        results( span::all, span::all, span(t)) = A;
+
+        // Testing against exact solution
+        double sum = 0.0;
+        for(int i = 0; i < Npoints; i++){
+            for(int j=0;j < Npoints; j++){
+                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*t);
+                
+                sum += fabs((A(i,j) - ExactSolution));
+            }
+        }
+
+        cout << setprecision(5) << setiosflags(ios::scientific);
+        cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
+    }
+    ofstream ofile;
+    string directory = "../results/2D_diffusion/";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
+    string filePath = directory + filename;
+    results.save(filePath, raw_ascii);
+}
+
+// Function for setting up the iterative Jacobi solver
+int JacobiSolver(int N, double dx, double dt, mat &A, mat &q, double abstol){
+    // A only has the boundary conditions, else it is zero. 
+    // q is the previous time step solution. 
+
+    int MaxIterations = 100000;
+    // Aold is the inital guess. 
+    mat Aold = zeros<mat>(N, N);
+    
+    double alpha = dt/(dx*dx);
+    
+    // This is the initial guess. 
+    for(int i=1;  i < N-1; i++){
+        for(int j=1; j < N-1; j++){
+            Aold(i,j) = 1.0;
+        }
+    }
+    
+    // Boundary Conditions -- all zeros
+    for(int i=0; i < N; i++){
+    A(0,i) = 0.0; // Top of matrix
+    A(N-1,i) = 0.0; // Bottom of matrix.
+    A(i,0) = 0.0; // Left side.
+    A(i,N-1) = 1.0; // Right side.
+    }
+    // Start the iterative solver
+    for(int k = 0; k < MaxIterations; k++){
+        for(int i=1; i < N-1; i++){
+            for(int j=1; j < N-1; j++){
+                A(i,j) = dt*q(i,j) + Aold(i,j) +
+                alpha*(Aold(i+1,j) + Aold(i,j+1) - 4.0*Aold(i,j) + 
+                Aold(i-1,j) + Aold(i,j-1));
+            }
+        }
+
+        // Sum the error at each location.
+        // And make Aold = A. 
+        double sum = 0.0;
+        for(int i = 0; i < N;i++){
+            for(int j = 0; j < N;j++){
+                sum += (Aold(i,j)-A(i,j))*(Aold(i,j)-A(i,j));
+                Aold(i,j) = A(i,j);
+            }
+        }
+
+        // Does the error reach the stopping criteria
+        if(sqrt (sum) <abstol){
+            return k;
+        }
+    }
+    // A should go to the next time step as q. 
+    for(int i = 0; i < N;i++){
+            for(int j = 0; j < N;j++){
+                A(i,j) = q(i,j);
+            }
+        }
+    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
+    return MaxIterations;
 }
