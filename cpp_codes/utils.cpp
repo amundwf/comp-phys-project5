@@ -2,6 +2,7 @@
 #include <iostream>
 #include <armadillo>
 #include <fstream>
+#include <iomanip> // Needed for set precision. 
 
 using namespace std;
 using namespace arma;
@@ -34,25 +35,31 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     diagonal matrix.
 
     Inputs:
-        alpha: double, will give diagonal elements a, b 
-        n: integer, number of grid points
-        x_0: double, point 0
-        x_n: double, point n+1
-        h: double, step size in spacial dimension.
+        a: double, the off diagonal element.
+        b: double, the diagonal element.
+        n: integer, number of grid points. There are actually n+1 grid points. 
+        u: arma::vec, the input vector(n+1).
+        verbose: bool, if you want to print out lots of stuff. 
     Outputs:
-        v: double, solution of size n+1 
+        unew: arma::vec, solution size(n+1)
     */
     
+    // I could use u but G is more similar to the previous code.
     vec G = u;
     vec B = vec(n+1);
     vec unew = vec(n+1);
+    // Set the first element of B.
     B[0] = b;
+    // Need the last element of B[n] for backward sub.
+    B[n] = b;
 
+    // Printing if verbose.
     if (verbose==true){
-            cout << "\nForward substitution... "<< endl;
-        }
+        cout << "\nForward substitution... "<< endl;
+    }
     // Forward substitution:
-    for (int i=1; i < n; i++) { // Start at index 2, or third row. up to n-1.
+    // Start at index 2, up to n-1. Don't touch n. 
+    for (int i=1; i < n; i++) { 
         double factorDiv = B[i-1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -60,50 +67,48 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
         B[i] = b - a*factor;
         G[i] = G[i] - G[i-1]*factor;
 
+        // Printing if verbose.
         if (verbose==true){
             cout << "B[i] is: "<< B[i] << endl;
             cout << "G[i] is: "<< G[i] << endl;
         }
     }
-    // Need the last element of B[n] for backward sub.
-    B[n] = b;
-
+    
     // Just in case set the boundary condition maunally.
     unew[n] = 1.0; unew[0] = 0.0;
     G[n] = 1.0; G[0] = 0.0;
 
+    // Printing if verbose.
     if (verbose==true){
-            cout << "\nBackward substitution... "<< endl;
-        }
+        cout << "\nBackward substitution... "<< endl;
+    }
     // Backward substitution:
-    for (int i=n-1; i > 0; i--) { // Start at row n-1 (index n-2), end at first row (row 1, index 0).
+    // Start at index n-1, end at index 1. Dont touch index 0 or n. 
+    for (int i=n-1; i > 0; i--) { 
         double factorDiv = B[i+1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
         // All upper diagonal elements gets eliminated.
-        // Final element in the row:
-        G[i] = G[i] - G[i+1]*factor; //in very first run i.e t=1 then G[i+1] = G[n]
+        
+        // In very first run i.e t=1 then G[i+1] = G[n], so we acces n but dont change it. 
+        G[i] = G[i] - G[i+1]*factor;
 
+        // Printing if verbose.
         if (verbose==true){
             cout << "G[i] is: "<< G[i] << endl;
         }
     }
-    if (verbose==true){
-            cout << "\nScaling... "<< endl;
-        }
     // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
     // solution for v:
     for (int i=1; i < n; i++) {
-        //std::cout << "g[i]: " << g[i] << std::endl;
-        //std::cout << "b[i]: " << b[i] << std::endl;
         unew[i] = G[i]/B[i];
 
         if (verbose==true){
-            cout << "unew[i+1]: "<< unew[i+1] << endl;
+            cout << "\nScaling... "<< endl;
+            cout << "unew: "<< unew[i+1] << endl;
         }
     }
-    
-    
+    // Return the solution arma::vec unew.
     return unew;
 }
 
@@ -122,7 +127,7 @@ void implicitScheme(int n, int tFinal, double tStep){
     u(n) = unew(n) = u_n;
 
     // Evaluate Delta x.
-    double xStep = (u(n)- u(0)) / n;
+    double xStep = (u(n) - u(0)) / n;
 
     // Find Delta t and the number of time steps to get to tFinal.
     int tSteps = int(tFinal/ tStep);
@@ -170,7 +175,7 @@ void implicitScheme(int n, int tFinal, double tStep){
     }  
     cout << "saving..." << endl;
     // Save the results.
-        string directory = "../results/5c/";
+        string directory = "../results/1D_diffusion/";
         string filename = "Implicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -185,7 +190,7 @@ void explicitScheme(int n, int tFinal){
     u(n) = unew(n) = 1.0;
 
     // Evaluate Delta x.
-    double xStep = (u(n)- u(0)) / n;
+    double xStep = (u(n) - u(0)) / n;
 
     // Find Delta t and the number of time steps to get to tFinal.
     // Stability criteria, constrains t step. 
@@ -222,7 +227,7 @@ void explicitScheme(int n, int tFinal){
     }  
     cout << "saving..." << endl;
     // Save the results.
-        string directory = "../results/5c/";
+        string directory = "../results/1D_diffusion/";
         string filename = "Explicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -278,13 +283,14 @@ void crankNicolsonScheme(int n, int tFinal, double tStep){
         // Run Thomas algo
         vec unew = ThomasAlgorithm(n, r, a, b, verbose);
 
-        //  note that the boundaries are not changed.
+        // Add data to results. 
         results(t, span(0,n)) = unew.t();
+        // Reset u for the next time step.
         u = unew;
     }  
     cout << "saving results..." << endl;
     // Save the results.
-    string directory = "../results/5c/";
+    string directory = "../results/1D_diffusion/";
     string filename = "CrankNicolson_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
@@ -296,4 +302,115 @@ void diffusion1D(){
     explicitScheme(n, tFinal);
     implicitScheme(n, tFinal, tStep);
     crankNicolsonScheme(n, tFinal, tStep);
+}
+
+void diffusion2D(){
+    int Npoints = 40;
+    int Tpoints = 40;
+    double ExactSolution;
+    double dx = 1.0/(Npoints-1);
+    double dt = 0.25*dx*dx;
+    double tFinal = Tpoints * dt;
+    double tolerance = 1.0e-14;
+    mat A = zeros<mat>(Npoints,Npoints);
+    mat q = zeros<mat>(Npoints,Npoints);
+    cube results = cube(Npoints, Npoints, Tpoints);
+
+    // setting up an additional source term. 
+    // This must to the initial state by add heat at some spots.
+    // For t=0
+    for(int i = 0; i < Npoints; i++){
+        for(int j = 0; j < Npoints; j++){
+            q(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
+        }
+    }
+    // Store initial conditions. 
+    results(span::all, span::all, span(0)) = q;
+
+    // Loop over time.
+    for( int t = 1; t < Tpoints; t++){
+
+        int itcount = JacobiSolver(Npoints,dx,dt,A,q,tolerance);
+
+        // Store A in cube results.
+        results( span::all, span::all, span(t)) = A;
+
+        // Testing against exact solution
+        double sum = 0.0;
+        for(int i = 0; i < Npoints; i++){
+            for(int j=0;j < Npoints; j++){
+                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*t);
+                
+                sum += fabs((A(i,j) - ExactSolution));
+            }
+        }
+
+        cout << setprecision(5) << setiosflags(ios::scientific);
+        cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
+    }
+    ofstream ofile;
+    string directory = "../results/2D_diffusion/";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
+    string filePath = directory + filename;
+    results.save(filePath, raw_ascii);
+}
+
+// Function for setting up the iterative Jacobi solver
+int JacobiSolver(int N, double dx, double dt, mat &A, mat &q, double abstol){
+    // A only has the boundary conditions, else it is zero. 
+    // q is the previous time step solution. 
+
+    int MaxIterations = 100000;
+    // Aold is the inital guess. 
+    mat Aold = zeros<mat>(N, N);
+    
+    double alpha = dt/(dx*dx);
+    
+    // This is the initial guess. 
+    for(int i=1;  i < N-1; i++){
+        for(int j=1; j < N-1; j++){
+            Aold(i,j) = 1.0;
+        }
+    }
+    
+    // Boundary Conditions -- all zeros
+    for(int i=0; i < N; i++){
+    A(0,i) = 0.0; // Top of matrix
+    A(N-1,i) = 0.0; // Bottom of matrix.
+    A(i,0) = 0.0; // Left side.
+    A(i,N-1) = 1.0; // Right side.
+    }
+    // Start the iterative solver
+    for(int k = 0; k < MaxIterations; k++){
+        for(int i=1; i < N-1; i++){
+            for(int j=1; j < N-1; j++){
+                A(i,j) = dt*q(i,j) + Aold(i,j) +
+                alpha*(Aold(i+1,j) + Aold(i,j+1) - 4.0*Aold(i,j) + 
+                Aold(i-1,j) + Aold(i,j-1));
+            }
+        }
+
+        // Sum the error at each location.
+        // And make Aold = A. 
+        double sum = 0.0;
+        for(int i = 0; i < N;i++){
+            for(int j = 0; j < N;j++){
+                sum += (Aold(i,j)-A(i,j))*(Aold(i,j)-A(i,j));
+                Aold(i,j) = A(i,j);
+            }
+        }
+
+        // Does the error reach the stopping criteria
+        if(sqrt (sum) <abstol){
+            return k;
+        }
+    }
+    // A should go to the next time step as q. 
+    for(int i = 0; i < N;i++){
+            for(int j = 0; j < N;j++){
+                A(i,j) = q(i,j);
+            }
+        }
+    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
+    return MaxIterations;
 }
