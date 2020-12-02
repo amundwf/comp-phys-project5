@@ -7,7 +7,9 @@ using namespace arma;
 
 int main(){
     
-    diffusion1D();
+    //diffusion1D();
+
+    diffusion2D();
 
     return 0;
 }
