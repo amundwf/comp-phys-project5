@@ -6,33 +6,39 @@ Created on Wed Dec  2 10:35:41 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams.update({'font.size': 22})
+plt.rcParams.update({'font.size': 12})
 import pandas as pd
 import os
 import re
 
 directory = "../results/2D_diffusion/"
 
-fig, ax = plt.subplots(2, 2, figsize=(20, 10), dpi = 80)
-    
+
+
+
 for filename in os.listdir(directory):
     if filename.endswith(".txt"):
-    
+        fig, ax = plt.subplots(4, 5, figsize=(9,9), dpi = 80)
+        ax = ax.flatten()
         cube = np.loadtxt(directory + filename)
         
-        cube = cube.reshape(40,40,-1)
+        cube = cube.reshape(10,10,-1)
         
         t_dim = cube.shape[2]
-        print(t_dim)
-        step = int(t_dim/4)
-        i = 0
+        
+        step = int(t_dim / len(ax))
+        print(step)
+        i=0
         j=0
-        ax = ax.flatten()
+        
         while i < t_dim:
-            ax[j].imshow(cube[:,:,i])
-            ax[j].set_title("solution at time={}".format(i))
+            pcm = ax[j].imshow(cube[:,:,i], cmap="viridis")
+            ax[j].set_title("solution \nat time={}".format(i))
             #ax[j].set_colorbar()
             
             j+=1
             i+=step
+        fig.tight_layout(pad = 2.0)
+        fig.colorbar(pcm, ax = ax)
+        #fig.set_title("Tpoints = {}".format(t_dim))
 
