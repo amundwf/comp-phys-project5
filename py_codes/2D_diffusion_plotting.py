@@ -22,9 +22,12 @@ for filename in os.listdir(directory):
         ax = ax.flatten()
         cube = np.loadtxt(directory + filename)
         
-        cube = cube.reshape(10,10,-1)
+        cube = cube.reshape(-1,100,100)
         
-        t_dim = cube.shape[2]
+        print("Cube shape is: ",cube.shape)
+        
+       
+        t_dim = cube.shape[0]
         
         step = int(t_dim / len(ax))
         print(step)
@@ -32,8 +35,8 @@ for filename in os.listdir(directory):
         j=0
         
         while i < t_dim:
-            pcm = ax[j].imshow(cube[:,:,i], cmap="viridis")
-            ax[j].set_title("solution \nat time={}".format(i))
+            pcm = ax[j].imshow(cube[i,:,:], cmap="viridis")
+            ax[j].set_title("solution \nat time={:.2f}".format(i*0.01))
             #ax[j].set_colorbar()
             
             j+=1
@@ -41,4 +44,4 @@ for filename in os.listdir(directory):
         fig.tight_layout(pad = 2.0)
         fig.colorbar(pcm, ax = ax)
         #fig.set_title("Tpoints = {}".format(t_dim))
-
+        
