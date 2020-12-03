@@ -209,7 +209,7 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     cout << "tPoints is: " << tPoints <<endl;
     
     // Set up the table to store solution at all time steps.
-    mat results = mat(tPoints+1, n+1);
+    mat results = mat(tPoints+1, n);
 
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
