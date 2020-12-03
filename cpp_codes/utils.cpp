@@ -305,12 +305,22 @@ void diffusion1D(){
 }
 
 void diffusion2D(){
-    int Npoints = 40;
-    int Tpoints = 60;
-    double ExactSolution;
+    double tFinal; int Npoints; double dt;
+    
+    cout << "Please enter Npoints (int)..." << endl;
+    cin >> Npoints;
+
     double dx = 1.0/(Npoints-1);
-    double dt = 0.25*dx*dx;
-    double tFinal = Tpoints * dt;
+    cout << "dx is: " << dx << endl;
+
+    cout << "Please enter tFinal (can be double)..." << endl;
+    cin >> tFinal;
+    
+    cout << "Please enter dt (double)..." << endl;
+    cin >> dt;
+
+    double ExactSolution;
+    int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
@@ -319,26 +329,29 @@ void diffusion2D(){
     // setting up an additional source term. 
     // This must to the initial state by add heat at some spots.
     // For t=0
+    /*
     for(int i = 1; i < Npoints-1; i++){
         for(int j = 1; j < Npoints-1; j++){
             A_prev(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
         }
     }
-
+    */
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
-        A_prev(0,i) = 0.0; // Top of matrix
-        A_prev(Npoints-1,i) = 0.0; // Bottom of matrix.
-        A_prev(i,0) = 0.0; // Left side.
-        A_prev(i,Npoints-1) = 0.0; // Right side.
+        A(0,i) = 0.0; // Top of matrix
+        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(i,0) = 0.0; // Left side.
+        A(i, Npoints-1) = 0.0; // Right side.
     }
 
     // Store initial conditions. 
-    results(span::all, span::all, span(0)) = A_prev;
+    results(span::all, span::all, span(0)) = A;
 
     // Loop over time.
     for( int t = 1; t < Tpoints; t++){
         double time = dt*t;
+        A_prev = A;
+        //cout << A << endl;
         int itcount = JacobiSolver(Npoints,dx,dt,A,A_prev,tolerance);
 
         // Store A in cube results.
@@ -369,11 +382,15 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     /* Return the iteration at which the Jacobi solver completes.
 
     Inputs:
-    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros).
+    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
     A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
     previous step.
 
     */
+
+    // Check if A is all zeros 
+    //cout << A_prev.is_zero() << endl;
+
     int MaxIterations = 100000;
     double alpha = dt/(dx*dx);
 
@@ -386,12 +403,21 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
         }
     }
 
+    // I think the boundary conditions need to be given to Aold as well each time iteration.
+    // Boundary Conditions set each time step to make sure.
+    for(int i=0; i < N; i++){
+        Aold(0,i) = 0.0; // Top of matrix
+        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(i,0) = 0.0; // Left side.
+        Aold(i, N-1) = 0.0; // Right side.
+    }
+
     // Start the iterative solver
     for(int k=0; k < MaxIterations; k++){
         for(int i=1; i < N-1; i++){
             for(int j=1; j < N-1; j++){
-                A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*(Aold(i+1,j) + Aold(i,j+1) + 
-                Aold(i-1,j) + Aold(i,j-1)) );
+                A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                Aold(i-1,j) + Aold(i,j-1) ) );
             }
         }
 
@@ -412,7 +438,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
         }
     }
     // Reset the previous time step to the A.
-    A_prev = A;
+    //A_prev = A;
 
     cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
     return MaxIterations;
