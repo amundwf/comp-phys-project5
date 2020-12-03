@@ -176,7 +176,7 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     
     // Save the results.
         string directory = "../results/1D_diffusion/";
-        string filename = "Implicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
+        string filename = "Implicit_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
@@ -227,7 +227,7 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     
     // Save the results.
         string directory = "../results/1D_diffusion/";
-        string filename = "Explicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
+        string filename = "Explicit_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
@@ -290,7 +290,7 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     
     // Save the results.
     string directory = "../results/1D_diffusion/";
-    string filename = "CrankNicolson_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
+    string filename = "CrankNicolson_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
