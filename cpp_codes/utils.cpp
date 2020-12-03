@@ -3,6 +3,8 @@
 #include <armadillo>
 #include <fstream>
 #include <iomanip> // Needed for set precision. 
+#include "omp.h"
+#define NUM_THREADS 8
 
 using namespace std;
 using namespace arma;
@@ -305,6 +307,9 @@ void diffusion1D(){
 }
 
 void diffusion2D(){
+    omp_set_num_threads(NUM_THREADS);
+    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
+
     double tFinal; int Npoints; double dt;
     
     cout << "Please enter Npoints (int)..." << endl;
@@ -412,34 +417,40 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
         Aold(i, N-1) = 0.0; // Right side.
     }
 
+    
     // Start the iterative solver
     for(int k=0; k < MaxIterations; k++){
-        for(int i=1; i < N-1; i++){
-            for(int j=1; j < N-1; j++){
-                A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                Aold(i-1,j) + Aold(i,j-1) ) );
-            }
-        }
-
-        // Sum the error at each location.
-        // And make Aold = A for the next iteration. 
         double sum = 0.0;
-        // In the example code this went from 0 to N, which i dont want.
-        for(int i = 1; i < N-1;i++){
-            for(int j = 1; j < N-1;j++){
-                sum += (Aold(i,j)-A(i,j))*(Aold(i,j)-A(i,j));
-                Aold(i,j) = A(i,j);
+        // Declare i and j from omp.
+        int i, j;
+        // Start parallel task.
+        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
+        {
+            # pragma omp for
+            for(int i=1; i < N-1; i++){
+                for(int j=1; j < N-1; j++){
+                    A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                    Aold(i-1,j) + Aold(i,j-1) ) );
+                }
             }
-        }
+
+            // Sum the error at each location.
+            // And make Aold = A for the next iteration. 
+            
+            // In the example code this went from 0 to N, which i dont want.
+            for(int i = 1; i < N-1;i++){
+                for(int j = 1; j < N-1;j++){
+                    sum += fabs( Aold(i,j) - A(i,j) );
+                    Aold(i,j) = A(i,j);
+                }
+            }
+        } // End parallel task.
 
         // Does the error reach the stopping criteria
-        if(sqrt (sum) <abstol){
+        if( (sum /= (N*N)) < abstol){
             return k;
         }
     }
-    // Reset the previous time step to the A.
-    //A_prev = A;
-
     cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
     return MaxIterations;
 }

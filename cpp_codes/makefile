@@ -7,7 +7,7 @@ run:
 	./main.out
 
 
-allp: compilep runp
+all_parallel: compilep runp
 
 compilep:
 	g++ -O3 -o main.out main.cpp utils.cpp -larmadillo -fopenmp
