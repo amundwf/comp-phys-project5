@@ -11,11 +11,11 @@ void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, s
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
-void explicitScheme(int n, int tFinal);
+void explicitScheme(int n, int tFinal, bool verbose);
 
-void implicitScheme(int n, int tFinal, double tStep);
+void implicitScheme(int n, int tFinal, double tStep, bool verbose);
 
-void crankNicolsonScheme(int n, int tFinal, double tStep);
+void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
 
 void diffusion1D();
 

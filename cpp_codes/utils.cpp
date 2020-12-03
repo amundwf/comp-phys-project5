@@ -48,20 +48,20 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     
     // I could use u but G is more similar to the previous code.
     vec G = u;
-    vec B = vec(n+1);
-    vec unew = vec(n+1);
+    vec B = vec(n);
+    vec unew = vec(n);
     // Set the first element of B.
     B[0] = b;
     // Need the last element of B[n] for backward sub.
-    B[n] = b;
+    B[n-1] = b;
 
     // Printing if verbose.
     if (verbose==true){
         cout << "\nForward substitution... "<< endl;
     }
     // Forward substitution:
-    // Start at index 2, up to n-1. Don't touch n. 
-    for (int i=1; i < n; i++) { 
+    // Start at index 1, up to n-2. Don't touch n-1 i.e the last element. 
+    for (int i=1; i < n-1; i++) { 
         double factorDiv = B[i-1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -77,16 +77,16 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     }
     
     // Just in case set the boundary condition maunally.
-    unew[n] = 1.0; unew[0] = 0.0;
-    G[n] = 1.0; G[0] = 0.0;
+    unew[n-1] = 1.0; unew[0] = 0.0;
+    G[n-1] = 1.0; G[0] = 0.0;
 
     // Printing if verbose.
     if (verbose==true){
         cout << "\nBackward substitution... "<< endl;
     }
     // Backward substitution:
-    // Start at index n-1, end at index 1. Dont touch index 0 or n. 
-    for (int i=n-1; i > 0; i--) { 
+    // Start at index n-2, end at index 1. Dont touch index 0 or n-1. 
+    for (int i=n-2; i > 0; i--) { 
         double factorDiv = B[i+1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -102,7 +102,7 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     }
     // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
     // solution for v:
-    for (int i=1; i < n; i++) {
+    for (int i=1; i < n-1; i++) {
         unew[i] = G[i]/B[i];
 
         if (verbose==true){
@@ -114,25 +114,25 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     return unew;
 }
 
-void implicitScheme(int n, int tFinal, double tStep){
+void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
-    vec u = vec(n+1, fill::zeros);
-    vec unew = vec(n+1, fill::zeros);
+    vec u = vec(n, fill::zeros);
+    vec unew = vec(n, fill::zeros);
 
     // Set the boundary conditions.
     double u_0 = 0.0;
     double u_n = 1.0;
 
     u(0) = unew(0) = u_0;
-    u(n) = unew(n) = u_n;
+    u(n-1) = unew(n-1) = u_n;
 
     // Evaluate Delta x.
-    double xStep = (u(n) - u(0)) / n;
+    double xStep = (u(n-1) - u(0)) / (n-1);
 
     // Find Delta t and the number of time steps to get to tFinal.
-    int tSteps = int(tFinal/ tStep);
+    int tPoints = int(tFinal/ tStep);
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
@@ -141,14 +141,14 @@ void implicitScheme(int n, int tFinal, double tStep){
     cout << "xStep is: " << xStep <<endl;
     cout << "tFinal is: " << tFinal <<endl;
     cout << "tStep is: " << tStep <<endl;
-    cout << "tSteps is: " << tSteps <<endl;
+    cout << "tPoints is: " << tPoints <<endl;
     cout << "alpha is: " << alpha << endl;
     
     // Set up the table to store solution at all time steps.
-    mat results = mat(tSteps+1, n+1);
+    mat results = mat(tPoints+1, n);
 
     // Add initial results to matrix.
-    results(0, span(0,n)) = u.t();
+    results(0, span(0,n-1)) = u.t();
 
     cout << "Initial u vec added to matrix" <<endl;
     // Time integration
@@ -159,46 +159,45 @@ void implicitScheme(int n, int tFinal, double tStep){
     u = u*hh;
     cout << "Running Thomas algo for A^-1." << endl;
     
-    bool verbose = true;
     for (int t = 1; t < 4; t++) {
         cout << "\nt is: " << t << endl;
         vec unew = ThomasAlgorithm(n, u, a, b, verbose);
         //  note that the boundaries are not changed.
-        results(t, span(0,n)) = unew.t();
+        results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
     verbose = false;
-    for (int t = 4; t <= tSteps; t++) {
+    for (int t = 4; t <= tPoints; t++) {
         
         vec unew = ThomasAlgorithm(n, u, a, b, verbose);
         //  note that the boundaries are not changed.
-        results(t, span(0,n)) = unew.t();
+        results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
     cout << "saving..." << endl;
     // Save the results.
         string directory = "../results/1D_diffusion/";
-        string filename = "Implicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+        string filename = "Implicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
-void explicitScheme(int n, int tFinal){
+void explicitScheme(int n, int tFinal, bool verbose ){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
-    vec u = vec(n+1, fill::zeros);
-    vec unew = vec(n+1, fill::zeros);
+    vec u = vec(n, fill::zeros);
+    vec unew = vec(n, fill::zeros);
     u(0) = unew(0) = 0.0;
-    u(n) = unew(n) = 1.0;
+    u(n-1) = unew(n-1) = 1.0;
 
     // Evaluate Delta x.
-    double xStep = (u(n) - u(0)) / n;
+    double xStep = (u(n-1) - u(0)) / (n-1);
 
     // Find Delta t and the number of time steps to get to tFinal.
     // Stability criteria, constrains t step. 
     double tStep = xStep*xStep/2;
     // Round upwards.
-    int tSteps = ceil(tFinal/ tStep);  
+    int tPoints = ceil(tFinal/ tStep);  
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
@@ -207,48 +206,48 @@ void explicitScheme(int n, int tFinal){
     cout << "xStep is: " << xStep <<endl;
     cout << "tFinal is: " << tFinal <<endl;
     cout << "tStep is: " << tStep <<endl;
-    cout << "tSteps is: " << tSteps <<endl;
+    cout << "tPoints is: " << tPoints <<endl;
     
     // Set up the table to store solution at all time steps.
-    mat results = mat(tSteps+1, n+1);
+    mat results = mat(tPoints+1, n+1);
 
     // Add initial results to matrix.
-    results(0, span(0,n)) = u.t();
+    results(0, span(0,n-1)) = u.t();
 
     cout << "Initial u vec added to matrix" <<endl;
     // Time integration
     cout << "Running for all t..." << endl;
-    for (int t = 1; t <= tSteps; t++) {
-        for (int i = 1; i < n; i++) {
+    for (int t = 1; t <= tPoints; t++) {
+        for (int i = 1; i < n-1; i++) {
             // Discretized diff eq
             unew(i) = alpha * u(i-1) + (1 - 2*alpha) * u(i) + alpha * u(i+1);
         }
         //  note that the boundaries are not changed.
-        results(t, span(0,n)) = unew.t();
+        results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
     cout << "saving..." << endl;
     // Save the results.
         string directory = "../results/1D_diffusion/";
-        string filename = "Explicit_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+        string filename = "Explicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
-void crankNicolsonScheme(int n, int tFinal, double tStep){
+void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
-    vec u = vec(n+1, fill::zeros);
-    vec r = vec(n+1, fill::zeros);
+    vec u = vec(n, fill::zeros);
+    vec r = vec(n, fill::zeros);
     vec unew = vec(n+1, fill::zeros);
     u(0) = unew(0) = 0.0;
-    u(n) = unew(n) = 1.0;
+    u(n-1) = unew(n-1) = 1.0;
 
     // Evaluate Delta x.
-    double xStep = (u(n)- u(0)) / n;
+    double xStep = (u(n-1)- u(0)) / (n-1);
     // Find Delta t and the number of time steps to get to tFinal.
 
-    int tSteps = int(tFinal/ tStep);
+    int tPoints = int(tFinal/ tStep);
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). and the diagonals. 
     double alpha = tStep / (xStep*xStep);
@@ -263,47 +262,69 @@ void crankNicolsonScheme(int n, int tFinal, double tStep){
     cout << "xStep is: " << xStep <<endl;
     cout << "tFinal is: " << tFinal <<endl;
     cout << "tStep is: " << tStep <<endl;
-    cout << "tSteps is: " << tSteps <<endl;
+    cout << "tPoints is: " << tPoints <<endl;
     
     // Set up the table to store solution at all time steps.
-    mat results = mat(tSteps+1, n+1);
+    mat results = mat(tPoints+1, n);
 
     // Add initial results to matrix.
-    results(0, span(0,n)) = u.t();
+    results(0, span(0,n-1)) = u.t();
 
-    bool verbose = false;
+    verbose = false;
     // Time integration
     cout << "Running for all t..." << endl;
-    for (int t = 1; t <= tSteps; t++) {
+    for (int t = 1; t <= tPoints; t++) {
         // Calculate the right hand side for CN. 
-        for (int i = 1; i < n; i++) {
+        for (int i = 1; i < n-1; i++) {
         	r(i) = alpha*u(i-1) + (2 - 2*alpha)*u(i) + alpha*u(i+1);
         }
         r(0) = 0.0;
-        r(n) = 1.0;
+        r(n-1) = 1.0;
 
         // Run Thomas algo
         vec unew = ThomasAlgorithm(n, r, a, b, verbose);
 
         // Add data to results. 
-        results(t, span(0,n)) = unew.t();
+        results(t, span(0,n-1)) = unew.t();
         // Reset u for the next time step.
         u = unew;
     }  
     cout << "saving results..." << endl;
     // Save the results.
     string directory = "../results/1D_diffusion/";
-    string filename = "CrankNicolson_N=" + to_string(n) + "tSteps=" + to_string(tSteps) + ".csv";
+    string filename = "CrankNicolson_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
 void diffusion1D(){
-    int n = 10;
-    int tFinal = 10; 
-    double tStep = 0.005;
-    explicitScheme(n, tFinal);
-    implicitScheme(n, tFinal, tStep);
-    crankNicolsonScheme(n, tFinal, tStep);
+
+    double tFinal; int Npoints; double dt; string verboseOrNot; bool verbose;
+    
+    cout << "Please enter Npoints (int)..." << endl;
+    cin >> Npoints;
+
+    double dx = 1.0/(Npoints-1);
+    cout << "dx is: " << dx << endl;
+
+    cout << "Please enter tFinal (can be double)..." << endl;
+    cin >> tFinal;
+    
+    cout << "Please enter dt for Implicit and CN (double)..." << endl;
+    cin >> dt;
+
+    cout << "Do you want verbose? (Y/N)?";
+    cin >> verboseOrNot;
+
+    if (verboseOrNot == "y"){
+        verbose = true;
+    }
+    else{
+        verbose = false;
+    }
+
+    explicitScheme(Npoints, tFinal, verbose);
+    implicitScheme(Npoints, tFinal, dt, verbose);
+    crankNicolsonScheme(Npoints, tFinal, dt, verbose);
 }
 
 void diffusion2D(){
