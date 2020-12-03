@@ -7,7 +7,7 @@ Created on Thu Dec  3 13:19:01 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams.update({'font.size': 12})
+plt.rcParams.update({'font.size': 15})
 import pandas as pd
 import os
 import re
@@ -28,15 +28,22 @@ for filename in os.listdir(directory):
         print(data.shape)
        
         
-        if re.search('explicit', filename):
-            d = 1
+        if re.search('Explicit', filename):
+            print("running explicit")
+            pcm = ax[j].pcolormesh(data)
+            ax[j].set_xlabel("distance")
+            ax[j].set_ylabel("time")
+            ax[j].set_yscale("linear")
+            ax[j].set_title("{}".format(filename))
             
-        pcm = ax[j].pcolor(data)
-        ax[j].set_xlabel("distance")
-        ax[j].set_ylabel("time")
-        ax[j].set_yscale("linear")
-        ax[j].set_title("{}".format(filename))
-        fig.tight_layout(pad = 2.0)
-        fig.colorbar(pcm, ax = ax[j])
-        j+=1
+            fig.colorbar(pcm, ax = ax[j])
+            j+=1
+        else:
+            pcm = ax[j].pcolormesh(data)
+            ax[j].set_xlabel("distance")
+            ax[j].set_ylabel("time")
+            ax[j].set_title("{}".format(filename))
+            
+            fig.colorbar(pcm, ax = ax[j])
+            j+=1
         
