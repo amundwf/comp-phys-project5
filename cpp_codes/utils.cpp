@@ -137,12 +137,13 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
 
-    cout << "n is: " << n <<endl;
-    cout << "xStep is: " << xStep <<endl;
-    cout << "tFinal is: " << tFinal <<endl;
-    cout << "tStep is: " << tStep <<endl;
+    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "N is:       " << n <<endl;
+    cout << "xStep is:   " << xStep <<endl;
+    cout << "tFinal is:  " << tFinal <<endl;
+    cout << "tStep is:   " << tStep <<endl;
     cout << "tPoints is: " << tPoints <<endl;
-    cout << "alpha is: " << alpha << endl;
+    cout << "alpha is:   " << alpha << endl;
     
     // Set up the table to store solution at all time steps.
     mat results = mat(tPoints+1, n);
@@ -150,17 +151,15 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
 
-    cout << "Initial u vec added to matrix" <<endl;
-    // Time integration
-
     double b = 1 + 2*alpha;
     double a = -alpha;
     double hh = xStep*xStep;
     u = u*hh;
-    cout << "Running Thomas algo for A^-1." << endl;
     
     for (int t = 1; t < 4; t++) {
-        cout << "\nt is: " << t << endl;
+        if (verbose==true){
+            cout << "\nt is: " << t << endl;
+        }
         vec unew = ThomasAlgorithm(n, u, a, b, verbose);
         //  note that the boundaries are not changed.
         results(t, span(0,n-1)) = unew.t();
@@ -174,7 +173,7 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
         results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
-    cout << "saving..." << endl;
+    
     // Save the results.
         string directory = "../results/1D_diffusion/";
         string filename = "Implicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
@@ -202,10 +201,11 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
 
-    cout << "n is: " << n <<endl;
-    cout << "xStep is: " << xStep <<endl;
+    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "N is:      " << n <<endl;
+    cout << "xStep is:  " << xStep <<endl;
     cout << "tFinal is: " << tFinal <<endl;
-    cout << "tStep is: " << tStep <<endl;
+    cout << "tStep is:  " << tStep <<endl;
     cout << "tPoints is: " << tPoints <<endl;
     
     // Set up the table to store solution at all time steps.
@@ -214,9 +214,7 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
 
-    cout << "Initial u vec added to matrix" <<endl;
     // Time integration
-    cout << "Running for all t..." << endl;
     for (int t = 1; t <= tPoints; t++) {
         for (int i = 1; i < n-1; i++) {
             // Discretized diff eq
@@ -226,7 +224,7 @@ void explicitScheme(int n, int tFinal, bool verbose ){
         results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
-    cout << "saving..." << endl;
+    
     // Save the results.
         string directory = "../results/1D_diffusion/";
         string filename = "Explicit_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
@@ -258,11 +256,12 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     // Need to scale by xStep*xStep.
     u = u*hh;
 
-    cout << "n is: " << n <<endl;
-    cout << "xStep is: " << xStep <<endl;
-    cout << "tFinal is: " << tFinal <<endl;
-    cout << "tStep is: " << tStep <<endl;
-    cout << "tPoints is: " << tPoints <<endl;
+    cout << "\nRunning Crank Nicolson Scheme ..." << endl;
+    cout << "Npoints is:   " << n <<endl;
+    cout << "xStep is:     " << xStep <<endl;
+    cout << "tFinal is:    " << tFinal <<endl;
+    cout << "tStep is:     " << tStep <<endl;
+    cout << "tPoints is:   " << tPoints <<endl;
     
     // Set up the table to store solution at all time steps.
     mat results = mat(tPoints+1, n);
@@ -272,7 +271,6 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
 
     verbose = false;
     // Time integration
-    cout << "Running for all t..." << endl;
     for (int t = 1; t <= tPoints; t++) {
         // Calculate the right hand side for CN. 
         for (int i = 1; i < n-1; i++) {
@@ -289,7 +287,7 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
         // Reset u for the next time step.
         u = unew;
     }  
-    cout << "saving results..." << endl;
+    
     // Save the results.
     string directory = "../results/1D_diffusion/";
     string filename = "CrankNicolson_N=" + to_string(n) + "tPoints=" + to_string(tPoints) + ".csv";
