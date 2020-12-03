@@ -6,10 +6,18 @@ using namespace std;
 using namespace arma;
 
 int main(){
+    int dim;
     
-    //diffusion1D();
+    cout << "Please enter if you want to run in 1D or 2D diffusion equation (int)" << endl;
+    cin >> dim;
 
-    diffusion2D();
+    if (dim == 1){
+        diffusion1D();
+    }
+    
+    if (dim == 2){
+        diffusion2D();
+    }
 
     return 0;
 }
