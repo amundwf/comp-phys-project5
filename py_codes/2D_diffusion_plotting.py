@@ -13,9 +13,6 @@ import re
 
 directory = "../results/2D_diffusion/"
 
-
-
-
 for filename in os.listdir(directory):
     if filename.endswith(".txt"):
         fig, ax = plt.subplots(4, 5, figsize=(9,9), dpi = 80)
