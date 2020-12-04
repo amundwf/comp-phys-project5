@@ -16,7 +16,7 @@ int main(){
     }
     
     if (dim == 2){
-        cout << "Do you want to run the function with physical constant? [Y/N]" << endl;
+        cout << "Do you want to run the function for the Lithosphere? [Y/N]" << endl;
         cin >> lithosphereOrNot;
 
         if (lithosphereOrNot == "y"){
