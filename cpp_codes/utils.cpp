@@ -325,26 +325,11 @@ void diffusion1D(){
     crankNicolsonScheme(Npoints, tFinal, dt, verbose);
 }
 
-void diffusion2D(){
+void diffusion2DLithosphere(){
     omp_set_num_threads(NUM_THREADS);
     cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
-    double tFinal; int Npoints; double dt; double maxDepth;
-
-    // This was the previous version before using physical constants. 
-    /*
-    cout << "Please enter Npoints (int)..." << endl;
-    cin >> Npoints;
-
-    double dx = 1.0/(Npoints-1);
-    cout << "dx is: " << dx << endl;
-
-    cout << "Please enter tFinal (can be double)..." << endl;
-    cin >> tFinal;
-    
-    cout << "Please enter dt (double)..." << endl;
-    cin >> dt;
-    */
+    double tFinal; double dt; double maxDepth; double dx;
 
     // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
     cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
@@ -352,7 +337,7 @@ void diffusion2D(){
 
     // What about the time step..
     cout << "What time step in Gy (double)" << endl;
-    cin << dt;
+    cin >> dt;
     cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
 
     // How deep in km
@@ -366,7 +351,7 @@ void diffusion2D(){
     int Tpoints = int(tFinal / dt);
     int Npoints = int(maxDepth / dx);
 
-    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints >> endl; 
+    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
 
     // density of lithosphere 3.510 Kg/m3.
     double rho = 3.510;
@@ -388,16 +373,6 @@ void diffusion2D(){
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);
 
-    // setting up an additional source term. 
-    // This must to the initial state by add heat at some spots.
-    // For t=0
-    /*
-    for(int i = 1; i < Npoints-1; i++){
-        for(int j = 1; j < Npoints-1; j++){
-            A_prev(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
-        }
-    }
-    */
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
         A(0,i) = 0.0; // Top of matrix
@@ -444,7 +419,7 @@ void diffusion2D(){
 }
 
 // Function for setting up the iterative Jacobi solver
-int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
+int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
     /* Return the iteration at which the Jacobi solver completes.
 
     Inputs:
@@ -483,7 +458,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     for(int k=0; k < MaxIterations; k++){
         double sum = 0.0;
         // Declare i and j from omp.
-        int i, j;
+        int i, j, Qtotal;
         // Start parallel task.
         # pragma omp parallel default(shared) private(i,j, Qtotal) reduction(+:sum)
         {
@@ -493,10 +468,6 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
                     // Both Qt and Qdepth are in the correct units. 
                     // Joules / Gy / km^3
                     double Qtotal = Qdepth(j, dx) + Qt;
-
-                    // Without physical constants. 
-                    //A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                    //Aold(i-1,j) + Aold(i,j-1) ) );
 
                     // With physical constants. 
                     A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
@@ -556,13 +527,166 @@ double Qdepth(int j, double dx){
 
     // Q units were micro Watts /m^3 now they are
     // Joules / Gy / km^3
-    if (depth <= 40 && depth>= 20){
-        return 0.35 * 3.15e19;
-    }
-    if (depth > 40){
-        return 0.05 * 3.15e19;
-    }
-    if (depth < 20){
+
+    // If less than or equal to 20 km.
+    if (depth <= 20){
         return 1.40 * 3.15e19;
     }
+
+    // If between 20 and 40 km.
+    if (depth > 20 && depth <= 40 ){
+        return 0.35 * 3.15e19;
+    }
+    // Else return Qdepth if greater than 40 km.
+    return 0.05 * 3.15e19;
+}
+
+
+// These functions below do not run with physical constants.
+
+void diffusion2D(){
+    omp_set_num_threads(NUM_THREADS);
+    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
+
+    double tFinal; int Npoints; double dt;
+    
+    cout << "Please enter Npoints (int)..." << endl;
+    cin >> Npoints;
+
+    double dx = 1.0/(Npoints-1);
+    cout << "dx is: " << dx << endl;
+
+    cout << "Please enter tFinal (can be double)..." << endl;
+    cin >> tFinal;
+    
+    cout << "Please enter dt (double)..." << endl;
+    cin >> dt;
+
+    double ExactSolution;
+    int Tpoints = int(tFinal / dt);
+    double tolerance = 1.0e-14;
+    mat A = zeros<mat>(Npoints,Npoints);
+    mat A_prev = zeros<mat>(Npoints,Npoints);
+    cube results = cube(Npoints, Npoints, Tpoints);
+
+    // setting up an additional source term. 
+    // This must to the initial state by add heat at some spots.
+    // For t=0
+    /*
+    for(int i = 1; i < Npoints-1; i++){
+        for(int j = 1; j < Npoints-1; j++){
+            A_prev(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
+        }
+    }
+    */
+    // Boundary Conditions -- all zeros
+    for(int i=0; i < Npoints; i++){
+        A(0,i) = 0.0; // Top of matrix
+        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(i,0) = 0.0; // Left side.
+        A(i, Npoints-1) = 0.0; // Right side.
+    }
+
+    // Store initial conditions. 
+    results(span::all, span::all, span(0)) = A;
+
+    // Loop over time.
+    for( int t = 1; t < Tpoints; t++){
+        double time = dt*t;
+        A_prev = A;
+        //cout << A << endl;
+        int itcount = JacobiSolver(Npoints,dx,dt,A,A_prev,tolerance);
+
+        // Store A in cube results.
+        results( span::all, span::all, span(t)) = A;
+
+        // Testing against exact solution
+        double sum = 0.0;
+        for(int i=0; i < Npoints; i++){
+            for(int j=0; j < Npoints; j++){
+                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
+                sum += fabs((A(i,j) - ExactSolution));
+            }
+        }
+
+        cout << setprecision(5) << setiosflags(ios::scientific);
+        cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
+    }
+    // End time loop.
+    ofstream ofile;
+    string directory = "../results/2D_diffusion/";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
+    string filePath = directory + filename;
+    results.save(filePath, raw_ascii);
+}
+
+// Function for setting up the iterative Jacobi solver
+int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol){
+    /* Return the iteration at which the Jacobi solver completes.
+    Inputs:
+    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
+    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
+    previous step.
+    */
+
+    // Check if A is all zeros 
+    //cout << A_prev.is_zero() << endl;
+
+    int MaxIterations = 100000;
+    double alpha = dt/(dx*dx);
+
+    // Aold is the inital guess which starts as 1.0
+    // everywhere. As the iterations go on it is changed.
+    mat Aold = zeros<mat>(N, N); 
+    for(int i=1;  i < N-1; i++){
+        for(int j=1; j < N-1; j++){
+            Aold(i,j) = 1.0;
+        }
+    }
+
+    // I think the boundary conditions need to be given to Aold as well each time iteration.
+    // Boundary Conditions set each time step to make sure.
+    for(int i=0; i < N; i++){
+        Aold(0,i) = 0.0; // Top of matrix
+        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(i,0) = 0.0; // Left side.
+        Aold(i, N-1) = 0.0; // Right side.
+    }
+
+    
+    // Start the iterative solver
+    for(int k=0; k < MaxIterations; k++){
+        double sum = 0.0;
+        // Declare i and j from omp.
+        int i, j;
+        // Start parallel task.
+        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
+        {
+            # pragma omp for
+            for(int i=1; i < N-1; i++){
+                for(int j=1; j < N-1; j++){
+                    A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                    Aold(i-1,j) + Aold(i,j-1) ) );
+                }
+            }
+
+            // Sum the error at each location.
+            // And make Aold = A for the next iteration. 
+            
+            // In the example code this went from 0 to N, which i dont want.
+            for(int i = 1; i < N-1;i++){
+                for(int j = 1; j < N-1;j++){
+                    sum += fabs( Aold(i,j) - A(i,j) );
+                    Aold(i,j) = A(i,j);
+                }
+            }
+        } // End parallel task.
+
+        // Does the error reach the stopping criteria
+        if( (sum /= (N*N)) < abstol){
+            return k;
+        }
+    }
+    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
+    return MaxIterations;
 }

@@ -21,10 +21,16 @@ void diffusion1D();
 
 void diffusion2D();
 
+void diffusion2DLithosphere();
+
 arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
-int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double Qt, double k, double beta);
+int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol);
+
+int JacobiSolverLithosphere(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double Qt, double k, double beta);
 
 double heatProduction(double time);
+
+double Qdepth(int j, double dt);
 
 #endif
