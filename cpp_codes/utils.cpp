@@ -343,6 +343,20 @@ void diffusion2D(){
     cout << "Please enter dt (double)..." << endl;
     cin >> dt;
 
+    // density of lithosphere 3.510 Kg/m3.
+    double rho = 3.510;
+    // Thermal conductivity k, 2.5 W/m/C.
+    double k = 2.5;
+    // Specific heat capacity cp, 1000 J/Kg/K.
+    double cp = 1000;
+
+    // Now these constant will be changed to be in Joules, 
+    // km, Giga years (Gy), Kelvin and kilograms (Kg).
+    rho = rho * 1e9;
+    k = k * 3.15e19;
+    // cp is unchanged, units are fine.
+    double beta = 1/(rho*cp);
+
     double ExactSolution;
     int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
@@ -373,10 +387,14 @@ void diffusion2D(){
 
     // Loop over time.
     for( int t = 1; t < Tpoints; t++){
-        double time = dt*t;
+        double time = dt*t; // time should be in Gy. 
         A_prev = A;
-        //cout << A << endl;
-        int itcount = JacobiSolver(Npoints,dx,dt,A,A_prev,tolerance);
+        
+        // Calculate Q, the heat production at time t.
+        // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
+        double Qt = heatProduction(time);
+
+        int itcount = JacobiSolver(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
@@ -402,7 +420,7 @@ void diffusion2D(){
 }
 
 // Function for setting up the iterative Jacobi solver
-int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol){
+int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
     /* Return the iteration at which the Jacobi solver completes.
 
     Inputs:
@@ -443,13 +461,22 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
         // Declare i and j from omp.
         int i, j;
         // Start parallel task.
-        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
+        # pragma omp parallel default(shared) private(i,j, Qtotal) reduction(+:sum)
         {
             # pragma omp for
             for(int i=1; i < N-1; i++){
                 for(int j=1; j < N-1; j++){
-                    A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                    Aold(i-1,j) + Aold(i,j-1) ) );
+                    // Both Qt and Qdepth are in the correct units. 
+                    // Joules / Gy / km^3
+                    double Qtotal = Qdepth(j, dx) + Qt;
+
+                    // Without physical constants. 
+                    //A(i,j) = (1/(1 + 4*alpha))*( A_prev(i,j) + alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                    //Aold(i-1,j) + Aold(i,j-1) ) );
+
+                    // With physical constants. 
+                    A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                    Aold(i-1,j) + Aold(i,j-1) ) ) );
                 }
             }
 
@@ -475,7 +502,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
 }
 
 double heatProduction(double time){
-    // Returns the heat production after time in Gy.
+    // Returns Qt, the heat production after time in Gy.
 
     // At t=0 this is the heat production formula.
     // where U is Uranium, Th is Thorium and K
@@ -489,8 +516,29 @@ double heatProduction(double time){
 
     // Calc the sum with different ratios in the mantle. 
     double sum = 0.4*nU + 0.4*nTh + 0.2*nK;
-    // Multiply this fraction by the heat production at t=0. 
-    double heat = 0.5*sum;
+    // Multiply this fraction (sum) by the heat production at t=0. 
+    // At t=0 is was 0.5 micro Watts / m^3, now it is in
+    // Joules / Gy / km^3
+    double Qt = 0.5*3.15e19*sum;
 
-    return heat;
+    return Qt;
+}
+
+double Qdepth(int j, double dx){
+    // Return the heat production as a function of depth, Qj or Qdepth. 
+
+    // depth in km.
+    double depth = dx*j;
+
+    // Q units were micro Watts /m^3 now they are
+    // Joules / Gy / km^3
+    if (depth <= 40 && depth>= 20){
+        return 0.35 * 3.15e19;
+    }
+    if (depth > 40){
+        return 0.05 * 3.15e19;
+    }
+    if (depth < 20){
+        return 1.40 * 3.15e19;
+    }
 }
