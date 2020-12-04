@@ -11,6 +11,7 @@ int main(){
     cout << "Please enter if you want to run in 1D or 2D diffusion equation (int)" << endl;
     cin >> dim;
 
+    // If statement for the dimension of the problem..
     if (dim == 1){
         diffusion1D();
     }
@@ -25,8 +26,6 @@ int main(){
         else{
             diffusion2D();
         }
-
-        
     }
 
     return 0;
