@@ -14,7 +14,7 @@ import re
 
 directory = "../results/1D_diffusion/"
 
-fig, ax = plt.subplots(1, 3, figsize=(9,9), dpi = 80)
+fig, ax = plt.subplots(2,2, figsize=(9,9), dpi = 80)
 ax = ax.flatten()
 j=0
 for filename in os.listdir(directory):
@@ -29,21 +29,38 @@ for filename in os.listdir(directory):
        
         
         if re.search('Explicit', filename):
-            print("running explicit")
+            print("plotting explicit")
             pcm = ax[j].pcolormesh(data)
-            ax[j].set_xlabel("distance")
-            ax[j].set_ylabel("time")
+            ax[j].set_xlabel("N Points")
+            ax[j].set_ylabel("Time Points")
             ax[j].set_yscale("linear")
             ax[j].set_title("{}".format(filename))
             
             fig.colorbar(pcm, ax = ax[j])
             j+=1
-        else:
-            pcm = ax[j].pcolormesh(data)
-            ax[j].set_xlabel("distance")
-            ax[j].set_ylabel("time")
-            ax[j].set_title("{}".format(filename))
             
+        
+        elif re.search("v_xt", filename):
+            print("plotting analytic")
+            N_x = data.shape[1]
+            xList = np.linspace(0,1,N_x)
+            u = np.zeros((data.shape))
+            
+            for i in range(0, data.shape[0]-1):
+                u[i,:] = data.iloc[i,:] + xList
+            
+            pcm = ax[j].pcolormesh(u, vmin=0.0, vmax=1.0)
+            ax[j].set_xlabel("N Points")
+            ax[j].set_ylabel("Time Points")
+            ax[j].set_title("Analytic {} + $x_i/L$".format(filename))
+            fig.colorbar(pcm, ax = ax[j])
+            j+=1
+        
+        else:
+            pcm = ax[j].pcolormesh(data, vmin=0.0, vmax=1.0)
+            ax[j].set_xlabel("N Points")
+            ax[j].set_ylabel("Time Points")
+            ax[j].set_title("{}".format(filename))
             fig.colorbar(pcm, ax = ax[j])
             j+=1
         
