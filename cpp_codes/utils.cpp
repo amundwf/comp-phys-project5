@@ -329,8 +329,10 @@ void diffusion2D(){
     omp_set_num_threads(NUM_THREADS);
     cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
-    double tFinal; int Npoints; double dt;
-    
+    double tFinal; int Npoints; double dt; double maxDepth;
+
+    // This was the previous version before using physical constants. 
+    /*
     cout << "Please enter Npoints (int)..." << endl;
     cin >> Npoints;
 
@@ -342,6 +344,29 @@ void diffusion2D(){
     
     cout << "Please enter dt (double)..." << endl;
     cin >> dt;
+    */
+
+    // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
+    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
+    cin >> tFinal;
+
+    // What about the time step..
+    cout << "What time step in Gy (double)" << endl;
+    cin << dt;
+    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
+
+    // How deep in km
+    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
+    cin >> maxDepth;
+
+    // What about the distance step..
+    cout << "Please enter the distance step (dx) in km" << endl;
+    cin >> dx;
+
+    int Tpoints = int(tFinal / dt);
+    int Npoints = int(maxDepth / dx);
+
+    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints >> endl; 
 
     // density of lithosphere 3.510 Kg/m3.
     double rho = 3.510;
@@ -358,7 +383,6 @@ void diffusion2D(){
     double beta = 1/(rho*cp);
 
     double ExactSolution;
-    int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
