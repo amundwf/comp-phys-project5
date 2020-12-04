@@ -393,7 +393,7 @@ void diffusion2DLithosphere(){
         // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
         double Qt = heatProduction(time);
 
-        int itcount = JacobiSolver(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
+        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
