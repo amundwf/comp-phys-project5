@@ -25,5 +25,6 @@ arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
 int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol);
 
+double heatProduction(double time);
 
 #endif

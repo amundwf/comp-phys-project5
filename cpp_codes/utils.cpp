@@ -473,3 +473,24 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
     return MaxIterations;
 }
+
+double heatProduction(double time){
+    // Returns the heat production after time in Gy.
+
+    // At t=0 this is the heat production formula.
+    // where U is Uranium, Th is Thorium and K
+    // is Potassium.
+    // +0.5 = Q(t=0) = 0.4*U(t=0) + 0.4*Th(t=0) 0.2*K(t=0)
+
+    // Half-life equation. starting with n0 = 1. 
+    double nU = pow(0.5, (time/4.47)); 
+    double nTh = pow(0.5, (time/14.0));
+    double nK = pow(0.5, (time/1.25));
+
+    // Calc the sum with different ratios in the mantle. 
+    double sum = 0.4*nU + 0.4*nTh + 0.2*nK;
+    // Multiply this fraction by the heat production at t=0. 
+    double heat = 0.5*sum;
+
+    return heat;
+}
