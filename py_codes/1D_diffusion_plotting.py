@@ -63,4 +63,4 @@ for filename in os.listdir(directory):
             ax[j].set_title("{}".format(filename))
             fig.colorbar(pcm, ax = ax[j])
             j+=1
-        
+plt.show()
