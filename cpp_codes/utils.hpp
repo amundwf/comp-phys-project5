@@ -17,6 +17,8 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose);
 
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
 
+void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
+
 void diffusion1D();
 
 void diffusion2D();

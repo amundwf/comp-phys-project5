@@ -2,7 +2,8 @@
 #include <iostream>
 #include <armadillo>
 #include <fstream>
-#include <iomanip> // Needed for set precision. 
+#include <iomanip> // Needed for set precision.
+#include <math.h> // M_PI
 #include "omp.h"
 #define NUM_THREADS 8
 
@@ -228,7 +229,7 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     // Save the results.
         string directory = "../results/1D_diffusion/";
         string filename = "Explicit_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
-        writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
+        writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
@@ -293,6 +294,113 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     string filename = "CrankNicolson_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
+
+void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum){
+    // N_sum: Number of terms to include in the sum of the analytical solution.
+    // The higher N_sum is, the better the approximation will be.
+
+    // k is meant to pre-calculate pi/L, but it's kind of pointless since L=1. But
+    // I just left it like this. :)
+    double k = M_PI;
+    double k2 = k*k;
+
+    // Make the list of x values. n_x values between x=0 and x=1.
+    double xStep = 1.0/double(n_x-1);
+    vec xList = zeros(n_x);
+    for (int i=0; i<=n_x-1; i++){
+        xList(i) = i*xStep;
+    }
+    // Make the list of t values.
+    int tPoints = int(tFinal/tStep);
+    vec tList = zeros(tPoints);
+    for (int i=0; i<=tPoints-1; i++){
+        tList(i) = i*tStep;
+    }
+    //xList.print("xList:"); tList.print("tList:");
+
+    // Now calculate the values of u(x,t) and put them in a 2D array:
+    mat v_xt_array = zeros(n_x, tPoints);
+    mat u_xt_array = zeros(n_x, tPoints);
+
+    for (int i=0; i<=n_x-1; i++){ // For all x
+        double x = xList(i);
+        for (int j=0; j<=tPoints-1; j++){ // For all t
+            double t = tList(j);
+            double v_xt = 0;
+            double u_xt = 0;
+            // Calculate the sum for u(x,t):
+            for (int n=1; n<=N_sum; n++){
+                double sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                v_xt += sum_element;
+                u_xt += sum_element + x;
+                // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
+            }
+            // Add u(x,t) to u_xt_array:
+            v_xt_array(i,j) = v_xt;
+            u_xt_array(i,j) = u_xt;
+        }
+    }
+    // Save the results.
+    string directory = "../results/1D_diffusion/";
+    writeGeneralMatrixToCSV_noLabels(v_xt_array.t(), "v_xt.csv", directory);
+    writeGeneralMatrixToCSV_noLabels(u_xt_array.t(), "analytical_1D.csv", directory);
+    // ^ u_xt_array is transposed to get the plots right.
+    // Also save xList and tList for plotting:
+    writeGeneralMatrixToCSV_noLabels(xList, "analytical_1D_xList.csv", directory);
+    writeGeneralMatrixToCSV_noLabels(tList, "analytical_1D_tList.csv", directory);
+}
+
+// This function for v(x,t) is just to test the analitycal 1D solution.
+void v_xt(int n_x, double tFinal, double tStep, int N_sum){
+    // N_sum: Number of terms to include in the sum of the analytical solution.
+    // The higher N_sum is, the better the approximation will be.
+
+    // k is meant to pre-calculate pi/L, but it's kind of pointless since L=1. But
+    // I just left it like this. :)
+    double k = M_PI;
+    double k2 = k*k;
+
+    // Make the list of x values. n_x values between x=0 and x=1.
+    double xStep = 1.0/double(n_x-1);
+    vec xList = zeros(n_x);
+    for (int i=0; i<=n_x-1; i++){
+        xList(i) = i*xStep;
+    }
+    // Make the list of t values.
+    int tPoints = int(tFinal/tStep);
+    vec tList = zeros(tPoints);
+    for (int i=0; i<=tPoints-1; i++){
+        tList(i) = i*tStep;
+    }
+    xList.print("xList:"); tList.print("tList:");
+
+    // Now calculate the values of u(x,t) and put them in a 2D array:
+    mat v_xt_array = zeros(n_x, tPoints);
+
+    for (int i=0; i<=n_x-1; i++){ // For all x
+        double x = xList(i);
+        for (int j=0; j<=tPoints-1; j++){ // For all t
+            double t = tList(j);
+            double v_xt = 0;
+            // Calculate the sum for u(x,t):
+            for (int n=1; n<=N_sum; n++){
+                v_xt += pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
+            }
+            // Add u(x,t) to u_xt_array:
+            v_xt_array(i,j) = v_xt;
+        }
+    }
+    // Save the results.
+    string directory = "../results/1D_diffusion/";
+    string filename = "analytical_1D.csv";
+    writeGeneralMatrixToCSV_noLabels(v_xt_array.t(), filename, directory);
+    // ^ u_xt_array is transposed to get the plots right.
+    // Also save xList and tList for plotting:
+    writeGeneralMatrixToCSV_noLabels(xList, "v_xt_xList.csv", directory);
+    writeGeneralMatrixToCSV_noLabels(tList, "v_xt_tList.csv", directory);
+}
+
 
 void diffusion1D(){
 

@@ -50,7 +50,6 @@ if calculate_function == True:
 dataFrame = pd.read_csv("../results/1D_diffusion/v_xt.csv", sep=',',header=None)
 v_array = dataFrame.values
 
-
 t_index = 0
 v_t_list = v_array[t_index,:] # plots v(x) at some time t.
 plot1, = plt.plot(xList, v_t_list)
