@@ -610,33 +610,33 @@ void diffusion2D(){
     cout << "Please enter dt (double)..." << endl;
     cin >> dt;
 
-    double ExactSolution;
     int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);
+    mat A_analytic = zeros<mat>(Npoints,Npoints);
+    cube resultsAnalytic = cube(Npoints, Npoints, Tpoints);
 
-    // setting up an additional source term. 
-    // This must to the initial state by add heat at some spots.
+    // setting up an additional source term. for analytic comparison.
     // For t=0
-    /*
     for(int i = 1; i < Npoints-1; i++){
         for(int j = 1; j < Npoints-1; j++){
-            A_prev(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
+            A(i,j) = sin(M_PI*dx*i)*sin(M_PI*dx*j);
         }
     }
-    */
+    
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
         A(0,i) = 0.0; // Top of matrix
-        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(Npoints-1, i) = 0.0; // Bottom of matrix.
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
     }
 
     // Store initial conditions. 
     results(span::all, span::all, span(0)) = A;
+    resultsAnalytic(span::all, span::all, span(0)) = A_analytic;
 
     // Loop over time.
     for( int t = 1; t < Tpoints; t++){
@@ -652,10 +652,13 @@ void diffusion2D(){
         double sum = 0.0;
         for(int i=0; i < Npoints; i++){
             for(int j=0; j < Npoints; j++){
-                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
-                sum += fabs((A(i,j) - ExactSolution));
+                // I removed the mius sign in exact.
+                A_analytic(i,j) = sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
+                sum += fabs( (A(i,j) - A_analytic(i,j)) );
             }
         }
+        // Store analytic result.
+        resultsAnalytic( span::all, span::all, span(t)) = A_analytic;
 
         cout << setprecision(5) << setiosflags(ios::scientific);
         cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
@@ -696,7 +699,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     // Boundary Conditions set each time step to make sure.
     for(int i=0; i < N; i++){
         Aold(0,i) = 0.0; // Top of matrix
-        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(N-1, i) = 0.0; // Bottom of matrix.
         Aold(i,0) = 0.0; // Left side.
         Aold(i, N-1) = 0.0; // Right side.
     }
