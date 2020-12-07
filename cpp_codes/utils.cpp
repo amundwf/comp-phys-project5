@@ -636,7 +636,7 @@ void diffusion2D(){
 
     // Store initial conditions. 
     results(span::all, span::all, span(0)) = A;
-    resultsAnalytic(span::all, span::all, span(0)) = A_analytic;
+    resultsAnalytic(span::all, span::all, span(0)) = A;
 
     // Loop over time.
     for( int t = 1; t < Tpoints; t++){
