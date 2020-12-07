@@ -410,7 +410,7 @@ void diffusion2DLithosphere(){
 
     // Now these constant will be changed to be in Joules, 
     // km, Giga years (Gy), Kelvin and kilograms (Kg).
-    rho = rho * 1e9;
+    rho = rho * 1e9; // Kg/km3. 
     k = k * 3.15e19;
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
@@ -423,8 +423,8 @@ void diffusion2DLithosphere(){
 
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
-        A(0,i) = 0.0; // Top of matrix
-        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(0,i) = 281.15; // Top of matrix
+        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
     }
@@ -494,9 +494,10 @@ int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, do
 
     // I think the boundary conditions need to be given to Aold as well each time iteration.
     // Boundary Conditions set each time step to make sure.
+    // Boundary coniditon in kelvin. 8 degree at top to 1300 degrees at bottom.
     for(int i=0; i < N; i++){
-        Aold(0,i) = 0.0; // Top of matrix
-        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(0,i) = 281.15; // Top of matrix
+        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
         Aold(i,0) = 0.0; // Left side.
         Aold(i, N-1) = 0.0; // Right side.
     }
