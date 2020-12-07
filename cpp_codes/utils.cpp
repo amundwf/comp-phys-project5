@@ -505,7 +505,7 @@ int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, do
                 for(int j=1; j < N-1; j++){
                     // Both Qt and Qdepth are in the correct units. 
                     // Joules / Gy / km^3
-                    double Qtotal = Qdepth(j, dx) + Qt;
+                    double Qtotal = Qdepth(i, dx) + Qt;
 
                     // With physical constants. 
                     A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
@@ -555,11 +555,11 @@ double heatProduction(double time){
     return Qt;
 }
 
-double Qdepth(int j, double dx){
+double Qdepth(int i, double dx){
     // Return the heat production as a function of depth, Qj or Qdepth. 
 
     // depth in km.
-    double depth = dx*j;
+    double depth = dx*i;
 
     // Q units were micro Watts /m^3 now they are
     // Joules / Gy / km^3
