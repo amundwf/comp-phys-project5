@@ -181,6 +181,14 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
+double stabilityConditionExplicit_dt(double dx){
+    // Returns a value for dt which is small enough to fulfill the stability 
+    // condition for the explicit scheme. The stability condition is dt/dx^2<=0.5,
+    // or dt <= 0.5*(dx^2).
+    double dt = 0.4*(dx*dx);
+    return dt;
+}
+
 void explicitScheme(int n, int tFinal, bool verbose ){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
