@@ -664,11 +664,16 @@ void diffusion2D(){
         cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
     }
     // End time loop.
+
     ofstream ofile;
     string directory = "../results/2D_diffusion/";
     string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
     string filePath = directory + filename;
     results.save(filePath, raw_ascii);
+
+    string filenameAnalytic = "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "_Analytic.txt";
+    string filePathAnalytic = directory + filenameAnalytic;
+    resultsAnalytic.save(filePathAnalytic, raw_ascii);
 }
 
 // Function for setting up the iterative Jacobi solver
