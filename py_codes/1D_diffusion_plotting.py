@@ -20,14 +20,11 @@ j=0
 for filename in os.listdir(directory):
     if filename.endswith(".csv"):
         
-        
-        
         data = np.loadtxt(directory + filename, delimiter=",")
         data = pd.DataFrame(data)
         print(filename)
         print(data.shape)
        
-        
         if re.search('Explicit', filename):
             print("plotting explicit")
             pcm = ax[j].pcolormesh(data)
@@ -38,29 +35,31 @@ for filename in os.listdir(directory):
             
             fig.colorbar(pcm, ax = ax[j])
             j+=1
-            
-        
-        elif re.search("v_xt", filename):
-            print("plotting analytic")
-            N_x = data.shape[1]
-            xList = np.linspace(0,1,N_x)
-            u = np.zeros((data.shape))
-            
-            for i in range(0, data.shape[0]-1):
-                u[i,:] = data.iloc[i,:] + xList
-            
-            pcm = ax[j].pcolormesh(u, vmin=0.0, vmax=1.0)
-            ax[j].set_xlabel("N Points")
-            ax[j].set_ylabel("Time Points")
-            ax[j].set_title("Analytic {} + $x_i/L$".format(filename))
-            fig.colorbar(pcm, ax = ax[j])
-            j+=1
-        
         else:
+                 
             pcm = ax[j].pcolormesh(data, vmin=0.0, vmax=1.0)
             ax[j].set_xlabel("N Points")
             ax[j].set_ylabel("Time Points")
             ax[j].set_title("{}".format(filename))
             fig.colorbar(pcm, ax = ax[j])
             j+=1
+            
+'''
+elif re.search("analytical", filename):
+    print("plotting analytic")
+    N_x = data.shape[1]
+    xList = np.linspace(0,1,N_x)
+    u = np.zeros((data.shape))
+    
+    for i in range(0, data.shape[0]-1):
+        u[i,:] = data.iloc[i,:] + xList
+    
+    pcm = ax[j].pcolormesh(u, vmin=0.0, vmax=1.0)
+    ax[j].set_xlabel("N Points")
+    ax[j].set_ylabel("Time Points")
+    ax[j].set_title("Analytic {} + $x_i/L$".format(filename))
+    fig.colorbar(pcm, ax = ax[j])
+    j+=1
+'''
+       
 plt.show()

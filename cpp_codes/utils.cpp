@@ -52,17 +52,17 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     vec B = vec(n);
     vec unew = vec(n);
     // Set the first element of B.
-    B[0] = b;
-    // Need the last element of B[n] for backward sub.
-    B[n-1] = b;
+    // Not sure why we cant start at index 0.
+    B[1] = b;
 
     // Printing if verbose.
     if (verbose==true){
         cout << "\nForward substitution... "<< endl;
     }
     // Forward substitution:
-    // Start at index 1, up to n-2. Don't touch n-1 i.e the last element. 
-    for (int i=1; i < n-1; i++) { 
+    // Start at index 1, up to n-2. Don't write over n-1 i.e the last element. 
+    // Changed from 1 to 2 since no index 0. 
+    for (int i=2; i < n-1; i++) { 
         double factorDiv = B[i-1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -79,8 +79,7 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     
     // Just in case set the boundary condition maunally.
     unew[n-1] = 1.0; unew[0] = 0.0;
-    G[n-1] = 1.0; G[0] = 0.0;
-
+    
     // Printing if verbose.
     if (verbose==true){
         cout << "\nBackward substitution... "<< endl;
@@ -88,29 +87,20 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     // Backward substitution:
     // Start at index n-2, end at index 1. Dont touch index 0 or n-1. 
     for (int i=n-2; i > 0; i--) { 
-        double factorDiv = B[i+1];
+        double factorDiv = B[i];
         double factorMult = a;
         double factor = factorMult/factorDiv;
         // All upper diagonal elements gets eliminated.
         
         // In very first run i.e t=1 then G[i+1] = G[n], so we acces n but dont change it. 
-        G[i] = G[i] - G[i+1]*factor;
+        unew[i] = G[i]/factorDiv - unew[i+1]*factor;
 
         // Printing if verbose.
         if (verbose==true){
-            cout << "G[i] is: "<< G[i] << endl;
+            cout << "unew[i] is: "<< unew[i] << endl;
         }
     }
-    // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
-    // solution for v:
-    for (int i=1; i < n-1; i++) {
-        unew[i] = G[i]/B[i];
 
-        if (verbose==true){
-            cout << "\nScaling... "<< endl;
-            cout << "unew: "<< unew[i+1] << endl;
-        }
-    }
     // Return the solution arma::vec unew.
     return unew;
 }
@@ -138,7 +128,7 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
 
-    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "\nRunning Implicit Scheme ..." << endl;
     cout << "N is:       " << n <<endl;
     cout << "xStep is:   " << xStep <<endl;
     cout << "tFinal is:  " << tFinal <<endl;
@@ -155,6 +145,8 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     double b = 1 + 2*alpha;
     double a = -alpha;
     double hh = xStep*xStep;
+
+    // Multiply by hh. 
     u = u*hh;
     
     for (int t = 1; t < 4; t++) {
@@ -419,19 +411,18 @@ void diffusion2DLithosphere(){
 
     // density of lithosphere 3.510 Kg/m3.
     double rho = 3.510;
-    // Thermal conductivity k, 2.5 W/m/C.
+    // Thermal conductivity k, 2.5 W/m/K.
     double k = 2.5;
     // Specific heat capacity cp, 1000 J/Kg/K.
     double cp = 1000;
 
     // Now these constant will be changed to be in Joules, 
     // km, Giga years (Gy), Kelvin and kilograms (Kg).
-    rho = rho * 1e9;
+    rho = rho * 1e9; // Kg/km3. 
     k = k * 3.15e19;
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
 
-    double ExactSolution;
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
@@ -439,8 +430,8 @@ void diffusion2DLithosphere(){
 
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
-        A(0,i) = 0.0; // Top of matrix
-        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(0,i) = 281.15; // Top of matrix
+        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
     }
@@ -462,22 +453,12 @@ void diffusion2DLithosphere(){
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
 
-        // Testing against exact solution
-        double sum = 0.0;
-        for(int i=0; i < Npoints; i++){
-            for(int j=0; j < Npoints; j++){
-                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
-                sum += fabs((A(i,j) - ExactSolution));
-            }
-        }
-
-        cout << setprecision(5) << setiosflags(ios::scientific);
-        cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
+        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
     }
     // End time loop.
     ofstream ofile;
     string directory = "../results/2D_diffusion/";
-    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
     string filePath = directory + filename;
     results.save(filePath, raw_ascii);
 }
@@ -510,9 +491,10 @@ int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, do
 
     // I think the boundary conditions need to be given to Aold as well each time iteration.
     // Boundary Conditions set each time step to make sure.
+    // Boundary coniditon in kelvin. 8 degree at top to 1300 degrees at bottom.
     for(int i=0; i < N; i++){
-        Aold(0,i) = 0.0; // Top of matrix
-        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(0,i) = 281.15; // Top of matrix
+        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
         Aold(i,0) = 0.0; // Left side.
         Aold(i, N-1) = 0.0; // Right side.
     }
@@ -540,9 +522,7 @@ int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, do
             }
 
             // Sum the error at each location.
-            // And make Aold = A for the next iteration. 
-            
-            // In the example code this went from 0 to N, which i dont want.
+            // And make Aold = A for the next iteration.
             for(int i = 1; i < N-1;i++){
                 for(int j = 1; j < N-1;j++){
                     sum += fabs( Aold(i,j) - A(i,j) );
@@ -626,33 +606,33 @@ void diffusion2D(){
     cout << "Please enter dt (double)..." << endl;
     cin >> dt;
 
-    double ExactSolution;
     int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);
+    mat A_analytic = zeros<mat>(Npoints,Npoints);
+    cube resultsAnalytic = cube(Npoints, Npoints, Tpoints);
 
-    // setting up an additional source term. 
-    // This must to the initial state by add heat at some spots.
+    // setting up an additional source term. for analytic comparison.
     // For t=0
-    /*
     for(int i = 1; i < Npoints-1; i++){
         for(int j = 1; j < Npoints-1; j++){
-            A_prev(i,j) = -2.0*M_PI*M_PI*sin(M_PI*dx*i)*sin(M_PI*dx*j);
+            A(i,j) = sin(M_PI*dx*i)*sin(M_PI*dx*j);
         }
     }
-    */
+    
     // Boundary Conditions -- all zeros
     for(int i=0; i < Npoints; i++){
         A(0,i) = 0.0; // Top of matrix
-        A(Npoints-1, i) = 1.0; // Bottom of matrix.
+        A(Npoints-1, i) = 0.0; // Bottom of matrix.
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
     }
 
     // Store initial conditions. 
     results(span::all, span::all, span(0)) = A;
+    resultsAnalytic(span::all, span::all, span(0)) = A;
 
     // Loop over time.
     for( int t = 1; t < Tpoints; t++){
@@ -668,20 +648,28 @@ void diffusion2D(){
         double sum = 0.0;
         for(int i=0; i < Npoints; i++){
             for(int j=0; j < Npoints; j++){
-                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
-                sum += fabs((A(i,j) - ExactSolution));
+                // I removed the mius sign in exact.
+                A_analytic(i,j) = sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
+                sum += fabs( (A(i,j) - A_analytic(i,j)) );
             }
         }
+        // Store analytic result.
+        resultsAnalytic( span::all, span::all, span(t)) = A_analytic;
 
         cout << setprecision(5) << setiosflags(ios::scientific);
         cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
     }
     // End time loop.
+
     ofstream ofile;
     string directory = "../results/2D_diffusion/";
     string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
     string filePath = directory + filename;
     results.save(filePath, raw_ascii);
+
+    string filenameAnalytic = "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "_Analytic.txt";
+    string filePathAnalytic = directory + filenameAnalytic;
+    resultsAnalytic.save(filePathAnalytic, raw_ascii);
 }
 
 // Function for setting up the iterative Jacobi solver
@@ -712,7 +700,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     // Boundary Conditions set each time step to make sure.
     for(int i=0; i < N; i++){
         Aold(0,i) = 0.0; // Top of matrix
-        Aold(N-1, i) = 1.0; // Bottom of matrix.
+        Aold(N-1, i) = 0.0; // Bottom of matrix.
         Aold(i,0) = 0.0; // Left side.
         Aold(i, N-1) = 0.0; // Right side.
     }
