@@ -403,7 +403,7 @@ void diffusion2DLithosphere(){
 
     // density of lithosphere 3.510 Kg/m3.
     double rho = 3.510;
-    // Thermal conductivity k, 2.5 W/m/C.
+    // Thermal conductivity k, 2.5 W/m/K.
     double k = 2.5;
     // Specific heat capacity cp, 1000 J/Kg/K.
     double cp = 1000;
@@ -415,7 +415,6 @@ void diffusion2DLithosphere(){
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
 
-    double ExactSolution;
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
@@ -446,22 +445,12 @@ void diffusion2DLithosphere(){
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
 
-        // Testing against exact solution
-        double sum = 0.0;
-        for(int i=0; i < Npoints; i++){
-            for(int j=0; j < Npoints; j++){
-                ExactSolution = -sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
-                sum += fabs((A(i,j) - ExactSolution));
-            }
-        }
-
-        cout << setprecision(5) << setiosflags(ios::scientific);
-        cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
+        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
     }
     // End time loop.
     ofstream ofile;
     string directory = "../results/2D_diffusion/";
-    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + ".txt";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
     string filePath = directory + filename;
     results.save(filePath, raw_ascii);
 }
@@ -525,9 +514,7 @@ int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, do
             }
 
             // Sum the error at each location.
-            // And make Aold = A for the next iteration. 
-            
-            // In the example code this went from 0 to N, which i dont want.
+            // And make Aold = A for the next iteration.
             for(int i = 1; i < N-1;i++){
                 for(int j = 1; j < N-1;j++){
                     sum += fabs( Aold(i,j) - A(i,j) );
