@@ -51,17 +51,17 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     vec B = vec(n);
     vec unew = vec(n);
     // Set the first element of B.
-    B[0] = b;
-    // Need the last element of B[n] for backward sub.
-    B[n-1] = b;
+    // Not sure why we cant start at index 0.
+    B[1] = b;
 
     // Printing if verbose.
     if (verbose==true){
         cout << "\nForward substitution... "<< endl;
     }
     // Forward substitution:
-    // Start at index 1, up to n-2. Don't touch n-1 i.e the last element. 
-    for (int i=1; i < n-1; i++) { 
+    // Start at index 1, up to n-2. Don't write over n-1 i.e the last element. 
+    // Changed from 1 to 2 since no index 0. 
+    for (int i=2; i < n-1; i++) { 
         double factorDiv = B[i-1];
         double factorMult = a;
         double factor = factorMult/factorDiv;
@@ -78,8 +78,7 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     
     // Just in case set the boundary condition maunally.
     unew[n-1] = 1.0; unew[0] = 0.0;
-    G[n-1] = 1.0; G[0] = 0.0;
-
+    
     // Printing if verbose.
     if (verbose==true){
         cout << "\nBackward substitution... "<< endl;
@@ -87,29 +86,20 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     // Backward substitution:
     // Start at index n-2, end at index 1. Dont touch index 0 or n-1. 
     for (int i=n-2; i > 0; i--) { 
-        double factorDiv = B[i+1];
+        double factorDiv = B[i];
         double factorMult = a;
         double factor = factorMult/factorDiv;
         // All upper diagonal elements gets eliminated.
         
         // In very first run i.e t=1 then G[i+1] = G[n], so we acces n but dont change it. 
-        G[i] = G[i] - G[i+1]*factor;
+        unew[i] = G[i]/factorDiv - unew[i+1]*factor;
 
         // Printing if verbose.
         if (verbose==true){
-            cout << "G[i] is: "<< G[i] << endl;
+            cout << "unew[i] is: "<< unew[i] << endl;
         }
     }
-    // Normalize the diagonal (divide all row i by b[i] for all rows) in order to get the 
-    // solution for v:
-    for (int i=1; i < n-1; i++) {
-        unew[i] = G[i]/B[i];
 
-        if (verbose==true){
-            cout << "\nScaling... "<< endl;
-            cout << "unew: "<< unew[i+1] << endl;
-        }
-    }
     // Return the solution arma::vec unew.
     return unew;
 }
@@ -137,7 +127,7 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
 
-    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "\nRunning Implicit Scheme ..." << endl;
     cout << "N is:       " << n <<endl;
     cout << "xStep is:   " << xStep <<endl;
     cout << "tFinal is:  " << tFinal <<endl;
@@ -154,6 +144,8 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     double b = 1 + 2*alpha;
     double a = -alpha;
     double hh = xStep*xStep;
+
+    // Multiply by hh. 
     u = u*hh;
     
     for (int t = 1; t < 4; t++) {
