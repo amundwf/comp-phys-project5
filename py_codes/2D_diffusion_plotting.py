@@ -33,12 +33,12 @@ for filename in os.listdir(directory):
         
         while i < t_dim:
             pcm = ax[j].imshow(cube[i,:,:], cmap="viridis")
-            ax[j].set_title("solution \nat time={:.2f}".format(i*0.01))
-            #ax[j].set_colorbar()
+            ax[j].set_title("solution \nat index time={}".format(i))
+            
             
             j+=1
             i+=step
-        fig.tight_layout(pad = 2.0)
+        #fig.tight_layout(pad = 2.0)
         fig.colorbar(pcm, ax = ax)
         #fig.set_title("Tpoints = {}".format(t_dim))
         
