@@ -381,209 +381,6 @@ void diffusion1D(){
     crankNicolsonScheme(Npoints, tFinal, dt, verbose);
 }
 
-void diffusion2DLithosphere(){
-    omp_set_num_threads(NUM_THREADS);
-    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
-
-    double tFinal; double dt; double maxDepth; double dx;
-
-    // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
-    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
-    cin >> tFinal;
-
-    // What about the time step..
-    cout << "What time step in Gy (double)" << endl;
-    cin >> dt;
-    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
-
-    // How deep in km
-    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
-    cin >> maxDepth;
-
-    // What about the distance step..
-    cout << "Please enter the distance step (dx) in km" << endl;
-    cin >> dx;
-
-    int Tpoints = int(tFinal / dt);
-    int Npoints = int(maxDepth / dx);
-
-    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
-
-    // density of lithosphere 3.510 Kg/m3.
-    double rho = 3.510;
-    // Thermal conductivity k, 2.5 W/m/K.
-    double k = 2.5;
-    // Specific heat capacity cp, 1000 J/Kg/K.
-    double cp = 1000;
-
-    // Now these constant will be changed to be in Joules, 
-    // km, Giga years (Gy), Kelvin and kilograms (Kg).
-    rho = rho * 1e9; // Kg/km3. 
-    k = k * 3.15e19;
-    // cp is unchanged, units are fine.
-    double beta = 1/(rho*cp);
-
-    double tolerance = 1.0e-14;
-    mat A = zeros<mat>(Npoints,Npoints);
-    mat A_prev = zeros<mat>(Npoints,Npoints);
-    cube results = cube(Npoints, Npoints, Tpoints);
-
-    // Boundary Conditions -- all zeros
-    for(int i=0; i < Npoints; i++){
-        A(0,i) = 281.15; // Top of matrix
-        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
-        A(i,0) = 0.0; // Left side.
-        A(i, Npoints-1) = 0.0; // Right side.
-    }
-
-    // Store initial conditions. 
-    results(span::all, span::all, span(0)) = A;
-
-    // Loop over time.
-    for( int t = 1; t < Tpoints; t++){
-        double time = dt*t; // time should be in Gy. 
-        A_prev = A;
-        
-        // Calculate Q, the heat production at time t.
-        // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
-        double Qt = heatProduction(time);
-
-        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
-
-        // Store A in cube results.
-        results( span::all, span::all, span(t)) = A;
-
-        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
-    }
-    // End time loop.
-    ofstream ofile;
-    string directory = "../results/2D_diffusion/";
-    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
-    string filePath = directory + filename;
-    results.save(filePath, raw_ascii);
-}
-
-// Function for setting up the iterative Jacobi solver
-int JacobiSolverLithosphere(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
-    /* Return the iteration at which the Jacobi solver completes.
-
-    Inputs:
-    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
-    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
-    previous step.
-
-    */
-
-    // Check if A is all zeros 
-    //cout << A_prev.is_zero() << endl;
-
-    int MaxIterations = 100000;
-    double alpha = dt/(dx*dx);
-
-    // Aold is the inital guess which starts as 1.0
-    // everywhere. As the iterations go on it is changed.
-    mat Aold = zeros<mat>(N, N); 
-    for(int i=1;  i < N-1; i++){
-        for(int j=1; j < N-1; j++){
-            Aold(i,j) = 1.0;
-        }
-    }
-
-    // I think the boundary conditions need to be given to Aold as well each time iteration.
-    // Boundary Conditions set each time step to make sure.
-    // Boundary coniditon in kelvin. 8 degree at top to 1300 degrees at bottom.
-    for(int i=0; i < N; i++){
-        Aold(0,i) = 281.15; // Top of matrix
-        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
-        Aold(i,0) = 0.0; // Left side.
-        Aold(i, N-1) = 0.0; // Right side.
-    }
-
-    
-    // Start the iterative solver
-    for(int k=0; k < MaxIterations; k++){
-        double sum = 0.0;
-        // Declare i and j from omp.
-        int i, j, Qtotal;
-        // Start parallel task.
-        # pragma omp parallel default(shared) private(i,j, Qtotal) reduction(+:sum)
-        {
-            # pragma omp for
-            for(int i=1; i < N-1; i++){
-                for(int j=1; j < N-1; j++){
-                    // Both Qt and Qdepth are in the correct units. 
-                    // Joules / Gy / km^3
-                    double Qtotal = Qdepth(i, dx) + Qt;
-
-                    // With physical constants. 
-                    A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                    Aold(i-1,j) + Aold(i,j-1) ) ) );
-                }
-            }
-
-            // Sum the error at each location.
-            // And make Aold = A for the next iteration.
-            for(int i = 1; i < N-1;i++){
-                for(int j = 1; j < N-1;j++){
-                    sum += fabs( Aold(i,j) - A(i,j) );
-                    Aold(i,j) = A(i,j);
-                }
-            }
-        } // End parallel task.
-
-        // Does the error reach the stopping criteria
-        if( (sum /= (N*N)) < abstol){
-            return k;
-        }
-    }
-    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
-    return MaxIterations;
-}
-
-double heatProduction(double time){
-    // Returns Qt, the heat production after time in Gy.
-
-    // At t=0 this is the heat production formula.
-    // where U is Uranium, Th is Thorium and K
-    // is Potassium.
-    // +0.5 = Q(t=0) = 0.4*U(t=0) + 0.4*Th(t=0) 0.2*K(t=0)
-
-    // Half-life equation. starting with n0 = 1. 
-    double nU = pow(0.5, (time/4.47)); 
-    double nTh = pow(0.5, (time/14.0));
-    double nK = pow(0.5, (time/1.25));
-
-    // Calc the sum with different ratios in the mantle. 
-    double sum = 0.4*nU + 0.4*nTh + 0.2*nK;
-    // Multiply this fraction (sum) by the heat production at t=0. 
-    // At t=0 is was 0.5 micro Watts / m^3, now it is in
-    // Joules / Gy / km^3
-    double Qt = 0.5*3.15e19*sum;
-
-    return Qt;
-}
-
-double Qdepth(int i, double dx){
-    // Return the heat production as a function of depth, Qj or Qdepth. 
-
-    // depth in km.
-    double depth = dx*i;
-
-    // Q units were micro Watts /m^3 now they are
-    // Joules / Gy / km^3
-
-    // If less than or equal to 20 km.
-    if (depth <= 20){
-        return 1.40 * 3.15e19;
-    }
-
-    // If between 20 and 40 km.
-    if (depth > 20 && depth <= 40 ){
-        return 0.35 * 3.15e19;
-    }
-    // Else return Qdepth if greater than 40 km.
-    return 0.05 * 3.15e19;
-}
 
 
 // These functions below do not run with physical constants.
@@ -741,4 +538,365 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
     }
     cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
     return MaxIterations;
+}
+
+
+// Functions to run before the enrichment. 
+
+void diffusion2DBeforeEnrichment(){
+    omp_set_num_threads(NUM_THREADS);
+    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
+
+    double tFinal; double dt; double maxDepth; double dx;
+
+    // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
+    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
+    cin >> tFinal;
+
+    // What about the time step..
+    cout << "What time step in Gy (double)" << endl;
+    cin >> dt;
+    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
+
+    // How deep in km
+    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
+    cin >> maxDepth;
+
+    // What about the distance step..
+    cout << "Please enter the distance step (dx) in km" << endl;
+    cin >> dx;
+
+    int Tpoints = int(tFinal / dt);
+    int Npoints = int(maxDepth / dx);
+
+    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
+
+    // density of lithosphere 3.510 Kg/m3.
+    double rho = 3.510;
+    // Thermal conductivity k, 2.5 W/m/K.
+    double k = 2.5;
+    // Specific heat capacity cp, 1000 J/Kg/K.
+    double cp = 1000;
+
+    // Now these constant will be changed to be in Joules, 
+    // km, Giga years (Gy), Kelvin and kilograms (Kg).
+    rho = rho * 1e9; // Kg/km3. 
+    k = k * 3.15e19;
+    // cp is unchanged, units are fine.
+    double beta = 1/(rho*cp);
+
+    double eta = k*beta*dt/(dx*dx);
+    cout << "The constant eta is: " << eta << endl;
+
+    double tolerance = 1.0e-14;
+    mat A = zeros<mat>(Npoints,Npoints);
+    mat A_prev = zeros<mat>(Npoints,Npoints);
+    cube results = cube(Npoints, Npoints, Tpoints);
+
+    // Boundary Conditions in Kelvin. 
+    for(int i=0; i < Npoints; i++){
+        A(0,i) = 281.15; // Top of matrix
+        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
+        A(i,0) = 0.0; // Left side.
+        A(i, Npoints-1) = 0.0; // Right side.
+    }
+
+    // Store initial conditions. 
+    results(span::all, span::all, span(0)) = A;
+
+    // Loop over time.
+    for( int t = 1; t < Tpoints; t++){
+        double time = dt*t; // time should be in Gy. 
+        A_prev = A;
+
+        int itcount = JacobiSolverBeforeEnrichment(Npoints,dx,dt,A,A_prev,tolerance,eta);
+
+        // Store A in cube results.
+        results( span::all, span::all, span(t)) = A;
+
+        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
+    }
+    // End time loop.
+    ofstream ofile;
+    string directory = "../results/2D_diffusion_before_enrichment/";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
+    string filePath = directory + filename;
+    results.save(filePath, raw_ascii);
+}
+
+// Function for setting up the iterative Jacobi solver
+int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double eta){
+    /* Return the iteration at which the Jacobi solver completes.
+
+    Inputs:
+    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
+    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
+    previous step.
+
+    */
+
+    int MaxIterations = 100000;
+    double alpha = dt/(dx*dx);
+
+    // Aold is the inital guess which starts as 1.0
+    // everywhere. As the iterations go on it is changed.
+    mat Aold = zeros<mat>(N, N); 
+    for(int i=1;  i < N-1; i++){
+        for(int j=1; j < N-1; j++){
+            Aold(i,j) = 1.0;
+        }
+    }
+
+    // Boundary Conditions set each time step to make sure.
+    // Boundary conditions in kelvin. 8 degree celcius at top to 1300 degrees celcius at bottom.
+    for(int i=0; i < N; i++){
+        Aold(0,i) = 281.15; // Top of matrix
+        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
+        Aold(i,0) = 0.0; // Left side.
+        Aold(i, N-1) = 0.0; // Right side.
+    }
+
+    // Start the iterative solver
+    for(int k=0; k < MaxIterations; k++){
+        double sum = 0.0;
+        // Declare i and j from omp.
+        int i, j;
+        // Start parallel task.
+        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
+        {
+            # pragma omp for
+            for(int i=1; i < N-1; i++){
+                for(int j=1; j < N-1; j++){
+                    
+                    // With physical constants. 
+                    A(i,j) = (1/(1 + 4*eta))*( A_prev(i,j) + eta*( Aold(i+1,j) + Aold(i,j+1) + 
+                    Aold(i-1,j) + Aold(i,j-1) ) );
+                }
+            }
+
+            // Sum the error at each location.
+            // And make Aold = A for the next iteration.
+            for(int i = 1; i < N-1;i++){
+                for(int j = 1; j < N-1;j++){
+                    sum += fabs( Aold(i,j) - A(i,j) );
+                    Aold(i,j) = A(i,j);
+                }
+            }
+        } // End parallel task.
+
+        // Does the error reach the stopping criteria
+        if( (sum /= (N*N)) < abstol){
+            return k;
+        }
+    }
+    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
+    return MaxIterations;
+}
+
+// These are functions for after radioactive enrichment.
+
+void diffusion2DAfterEnrichment(){
+    omp_set_num_threads(NUM_THREADS);
+    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
+
+    double tFinal; double dt; double maxDepth; double dx;
+
+    // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
+    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
+    cin >> tFinal;
+
+    // What about the time step..
+    cout << "What time step in Gy (double)" << endl;
+    cin >> dt;
+    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
+
+    // How deep in km
+    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
+    cin >> maxDepth;
+
+    // What about the distance step..
+    cout << "Please enter the distance step (dx) in km" << endl;
+    cin >> dx;
+
+    int Tpoints = int(tFinal / dt);
+    int Npoints = int(maxDepth / dx);
+
+    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
+
+    // density of lithosphere 3.510 Kg/m3.
+    double rho = 3.510;
+    // Thermal conductivity k, 2.5 W/m/K.
+    double k = 2.5;
+    // Specific heat capacity cp, 1000 J/Kg/K.
+    double cp = 1000;
+
+    // Now these constant will be changed to be in Joules, 
+    // km, Giga years (Gy), Kelvin and kilograms (Kg).
+    rho = rho * 1e9; // Kg/km3. 
+    k = k * 3.15e19;
+    // cp is unchanged, units are fine.
+    double beta = 1/(rho*cp);
+
+    double eta = k*beta*dt/(dx*dx);
+    cout << "The constant eta is: " << eta << endl;
+
+    double tolerance = 1.0e-14;
+    mat A = zeros<mat>(Npoints,Npoints);
+    mat A_prev = zeros<mat>(Npoints,Npoints);
+    cube results = cube(Npoints, Npoints, Tpoints);
+
+    // Boundary Conditions in Kelvin. 
+    for(int i=0; i < Npoints; i++){
+        A(0,i) = 281.15; // Top of matrix
+        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
+        A(i,0) = 0.0; // Left side.
+        A(i, Npoints-1) = 0.0; // Right side.
+    }
+
+    // Store initial conditions. 
+    results(span::all, span::all, span(0)) = A;
+
+    // Loop over time.
+    for( int t = 1; t < Tpoints; t++){
+        double time = dt*t; // time should be in Gy. 
+        A_prev = A;
+        
+        // Calculate Q, the heat production at time t.
+        // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
+        double Qt = Qtime(time);
+
+        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
+
+        // Store A in cube results.
+        results( span::all, span::all, span(t)) = A;
+
+        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
+    }
+    // End time loop.
+    ofstream ofile;
+    string directory = "../results/2D_diffusion_after_enrichment/";
+    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
+    string filePath = directory + filename;
+    results.save(filePath, raw_ascii);
+}
+
+// Function for setting up the iterative Jacobi solver
+int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
+    /* Return the iteration at which the Jacobi solver completes.
+
+    Inputs:
+    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
+    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
+    previous step.
+
+    */
+
+    // Check if A is all zeros 
+    //cout << A_prev.is_zero() << endl;
+
+    int MaxIterations = 100000;
+    double alpha = dt/(dx*dx);
+
+    // Aold is the inital guess which starts as 1.0
+    // everywhere. As the iterations go on it is changed.
+    mat Aold = zeros<mat>(N, N); 
+    for(int i=1;  i < N-1; i++){
+        for(int j=1; j < N-1; j++){
+            Aold(i,j) = 1.0;
+        }
+    }
+
+    // Boundary Conditions set each time step to make sure.
+    // Boundary conditions in kelvin. 8 degree celcius at top to 1300 degrees celcius at bottom.
+    for(int i=0; i < N; i++){
+        Aold(0,i) = 281.15; // Top of matrix
+        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
+        Aold(i,0) = 0.0; // Left side.
+        Aold(i, N-1) = 0.0; // Right side.
+    }
+
+    
+    // Start the iterative solver
+    for(int k=0; k < MaxIterations; k++){
+        double sum = 0.0;
+        // Declare i and j from omp.
+        int i, j, Qtotal;
+        // Start parallel task.
+        # pragma omp parallel default(shared) private(i,j, Qtotal) reduction(+:sum)
+        {
+            # pragma omp for
+            for(int i=1; i < N-1; i++){
+                for(int j=1; j < N-1; j++){
+                    // Both Qt and Qdepth are in the correct units. 
+                    // Joules / Gy / km^3
+                    double Qtotal = Qdepth(i, dx) + Qt;
+
+                    // With physical constants. 
+                    A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                    Aold(i-1,j) + Aold(i,j-1) ) ) );
+                }
+            }
+
+            // Sum the error at each location.
+            // And make Aold = A for the next iteration.
+            for(int i = 1; i < N-1;i++){
+                for(int j = 1; j < N-1;j++){
+                    sum += fabs( Aold(i,j) - A(i,j) );
+                    Aold(i,j) = A(i,j);
+                }
+            }
+        } // End parallel task.
+
+        // Does the error reach the stopping criteria
+        if( (sum /= (N*N)) < abstol){
+            return k;
+        }
+    }
+    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
+    return MaxIterations;
+}
+
+double Qtime(double time){
+    // Returns Qt, the heat production after time in Gy.
+
+    // At t=0 this is the heat production formula.
+    // where U is Uranium, Th is Thorium and K
+    // is Potassium.
+    // +0.5 = Q(t=0) = 0.4*U(t=0) + 0.4*Th(t=0) 0.2*K(t=0)
+
+    // Half-life equation. starting with n0 = 1. 
+    double nU = pow(0.5, (time/4.47)); 
+    double nTh = pow(0.5, (time/14.0));
+    double nK = pow(0.5, (time/1.25));
+
+    // Calc the sum with different ratios in the mantle. 
+    double sum = 0.4*nU + 0.4*nTh + 0.2*nK;
+    // Multiply this fraction (sum) by the heat production at t=0. 
+    // At t=0 is was 0.5 micro Watts / m^3, now it is in
+    // Joules / Gy / km^3
+    double Qt = 0.5*3.15e19*sum;
+
+    return Qt;
+}
+
+double Qdepth(int i, double dx){
+    // Return the heat production as a function of depth, Qj or Qdepth. 
+
+    // depth in km.
+    double depth = dx*i;
+
+    // Q units were micro Watts /m^3 now they are
+    // Joules / Gy / km^3
+
+    // If less than or equal to 20 km.
+    if (depth <= 20){
+        return 1.40 * 3.15e19;
+    }
+
+    // If between 20 and 40 km.
+    if (depth > 20 && depth <= 40 ){
+        return 0.35 * 3.15e19;
+    }
+    // Else return Qdepth if greater than 40 km.
+    return 0.05 * 3.15e19;
 }
