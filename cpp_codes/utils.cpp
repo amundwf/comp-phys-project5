@@ -765,7 +765,7 @@ void diffusion2DAfterEnrichment(){
         // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
         double Qt = Qtime(time);
 
-        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
+        int itcount = JacobiSolverAfterEnrichment(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
