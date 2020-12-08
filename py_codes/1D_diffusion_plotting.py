@@ -30,7 +30,7 @@ for filename in os.listdir(directory):
             name = "Explicit"
         elif re.search("Implicit", filename):
             name = "Implicit"
-         elif re.search("Crank", filename):
+        elif re.search("Crank", filename):
             name = "Crank Nicolson"
                  
         pcm = ax[j].pcolormesh(data, vmin=0.0, vmax=1.0)
