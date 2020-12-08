@@ -11,6 +11,8 @@ void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, s
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
+double stabilityConditionExplicit_dt(double dx);
+
 void explicitScheme(int n, int tFinal, bool verbose);
 
 void implicitScheme(int n, int tFinal, double tStep, bool verbose);
