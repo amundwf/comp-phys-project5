@@ -13,20 +13,21 @@ import os
 import re
 
 #directory = "../results/2D_diffusion_before_enrichment/"
-directory = "../results/2D_diffusion/"
+directory = "../results/2D_diffusion_after_enrichment/"
+#directory = "../results/2D_diffusion/"
 
 for filename in os.listdir(directory):
     if filename.endswith(".txt"):
-        if re.search("ana", filename):
+        if re.search("Ana", filename):
             name = "Analytic"
         else:
             name = "Numerical"
-        fig, axes = plt.subplots(4,5, figsize=(9,9), dpi = 80)
+        fig, axes = plt.subplots(3,2, figsize=(15, 15), dpi = 80)
         axes = axes.flatten()
         cube = np.loadtxt(directory + filename)
         
         # PLease enter the x dimension in the csv file.
-        x_dim = 100
+        x_dim = 10
         cube = cube.reshape(-1,x_dim,x_dim)
         
         print("The cube shape is: ",cube.shape)
@@ -46,41 +47,14 @@ for filename in os.listdir(directory):
             #ax.set_xticks([])
             #ax.set_yticks([])
             
-            i+=1
-            cbar = fig.colorbar(pcm, ax = axes, format="%.2e")
-            cbar.set_label("Temperature / Kelvin")
-        fig.suptitle("{} Solution".format(name))
-        plt.savefig(directory + "BeforeEnrichment.png")
-        #plt.savefig(directory + "BeforeEnrichment.pdf")
-
-
-'''
-for filename in os.listdir(directory):
-    if filename.endswith(".txt"):
-        fig, axes = plt.subplots(3, 7, figsize=(9,9), dpi = 80)
-        axes = axes.flatten()
-        cube = np.loadtxt(directory + filename)
-        
-        # PLease enter the x dimension in the csv file.
-        x_dim = 100
-        cube = cube.reshape(-1,x_dim,x_dim)
-        
-        print("Cube shape is: ",cube.shape)
-        
-       
-        t_dim = cube.shape[0]
-        
-        step = int(t_dim / len(axes))
-        print(step)
-        i=0
-      
-        row = int(x_dim/2)
-        
-        for ax in axes:
-            pcm = ax.plot(cube[i,50,:])
-            ax.set_title("time ind={}".format(i))
             i+=step
-'''    
+            cbar = fig.colorbar(pcm, ax = ax, format="%.2e")
+            cbar.set_label("Temperature /Kelvin")
+        fig.suptitle("{} Solution to the two dimensional diffusion equation".format(name))
+        
+        plt.savefig(directory + "{}.png".format(name))
+        plt.savefig(directory + "{}.pdf".format(name))
+
         
         
         
