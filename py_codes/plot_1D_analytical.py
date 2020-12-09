@@ -35,8 +35,8 @@ X, T = np.meshgrid(xList, tList)
 #plt.pcolor(xList, tList, u_xt_array)#, cmap=cm)
 
 #plotCodeWord = 'colormesh'
-plotCodeWord = 'oneFrame' # Plots u for one specified time.
-#plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
+#plotCodeWord = 'oneFrame' # Plots u for one specified time.
+plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
 t_index = 10 # Which timestep should be plotted?
 
 if plotCodeWord == 'colormesh':
@@ -69,7 +69,7 @@ elif plotCodeWord == 'animate':
     line, = plt.plot([], [], 'ro')
 
     def init():
-        ax.set_xlim(-0.01, 0.99)
+        ax.set_xlim(-0.01, 1.01)
         #ax.set_ylim(-1, 40)
         ax.set_ylim(-1, v_xt_array.max()*1.3)
         return line,
@@ -80,6 +80,7 @@ elif plotCodeWord == 'animate':
         t = tList[frame]
 
         u_xt_list = u_xt_array[frame, :] # u(x,t) at the specific time t.
+        #u_xt_list = u_xt_array[frame+1, :]
 
         v_xt_list = v_xt_array[frame, :]
         minus_f_x_list = (-ut.f(xList,1))[:,0]
@@ -103,11 +104,14 @@ elif plotCodeWord == 'animate':
         return line,
     #ani = FuncAnimation(fig, update, frames=np.array(range(len(tList))),
                         #init_func=init, blit=True)
-    ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=20, blit=True)
+    ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=50, blit=True)
     plt.ylabel(r'$u(x,t)$')
+    
 
 plt.xlabel(r'$x$')
 plt.suptitle('Analytical 1D solution, diffusion equation')
 plt.legend()
 plt.show()
 
+if plotCodeWord=='animate': # Save the animation as a gif:
+    ani.save('../results/1D_diffusion/analytical_1D.gif',writer='imagemagick') 
