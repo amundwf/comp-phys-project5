@@ -3,6 +3,7 @@
 *.exe
 *.csv
 *.txt
+*.gif
 **testing.py
 **testing.cpp
 
