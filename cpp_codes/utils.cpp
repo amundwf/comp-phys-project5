@@ -127,7 +127,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
         tList(i) = i*tStep;
     }
     // Now calculate the values of u(x,t) and put them in a 2D array:
-    mat v_xt_array = zeros(n_x, tPoints);
+    mat v_xt_array = zeros(n_x, tPoints+1);
     mat u_xt_array = zeros(n_x, tPoints);
 
     for (int i=0; i<=n_x-1; i++){ // For all x
@@ -217,10 +217,11 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     // n: Number of x points.
     double xStep = (x_end-x_start)/double(n-1);
 
+    // Boundary conditions for u(x,t):
     vec u = vec(n, fill::zeros);
     vec unew = vec(n, fill::zeros);
-    u(0) = unew(0) = x_start;
-    u(n-1) = unew(n-1) = x_end;
+    u(0) = unew(0) = 0.0;
+    u(n-1) = unew(n-1) = 1.0;
 
     int tPoints = ceil(tFinal/tStep); // Number of time steps.
 
@@ -240,9 +241,6 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
 
-    cout << "results.n_cols: " << results.n_cols << endl;
-    cout << "results.n_rows: " << results.n_rows << endl;
-
     // Time integration
     for (int t = 1; t <= tPoints; t++) {
         for (int i = 1; i < n-1; i++) {
@@ -250,12 +248,13 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
             unew(i) = alpha * u(i-1) + (1 - 2*alpha) * u(i) + alpha * u(i+1);
         }
         //  note that the boundaries are not changed.
-
-        cout << "unew.n_cols: " << unew.n_cols << endl;
-        cout << "unew.n_rows: " << unew.n_rows << endl << endl;
         results(t, span(0,n-1)) = unew.t();
         u = unew;
     }
+
+    cout << "results.n_cols: " << results.n_cols << endl;
+    cout << "results.n_rows: " << results.n_rows << endl;
+    results.print("results explicit:");
 
     // Save the results.
     string directory = "../results/1D_diffusion/";
@@ -364,8 +363,6 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
 
-
-
     double b = 1 + 2*alpha;
     double a = -alpha;
     double hh = xStep*xStep;
@@ -374,9 +371,8 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     u = u*hh;
 
     bool verbose = false;
-
     for (int t = 1; t < 4; t++) {
-        cout << "\nt is: " << t << endl;
+        //cout << "\nt is: " << t << endl;
 
         vec unew = ThomasAlgorithm(n, u, a, b, verbose);
         //  note that the boundaries are not changed.
@@ -392,6 +388,13 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
         u = unew;
     }
     
+    cout << "results.n_cols: " << results.n_cols << endl;
+    cout << "results.n_rows: " << results.n_rows << endl;
+    results.print("results implicit:");
+    results(0,span::all).print("row idx = 0:");
+    results(tPoints-1,span::all).print("row idx = tPoints-1:");
+    results(tPoints,span::all).print("row idx = tPoints:");
+
     // Save the results.
     string directory = "../results/1D_diffusion/";
     string filename = "implicit_1D.csv";
@@ -919,7 +922,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
 }
 
 void run_5c(){
-    double tFinal = 1e-1; // Final time
+    double tFinal = 1; // Final time
     int Nx = 10; // Number of x points between 0 and L=1. In 5c: 10 or 100)
     double x_start = 0; double x_end = 1;
     double dx = (x_end-x_start)/double(Nx-1);
