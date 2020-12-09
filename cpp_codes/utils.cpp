@@ -737,9 +737,6 @@ void diffusion2DAfterEnrichment(){
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
 
-    double eta = k*beta*dt/(dx*dx);
-    cout << "The constant eta is: " << eta << endl;
-
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
@@ -751,6 +748,15 @@ void diffusion2DAfterEnrichment(){
         A(Npoints-1, i) = 1573.15; // Bottom of matrix.
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
+    }
+
+    // Add initial heat production conditions.
+    for(int i = 1; i < Npoints-1; i++){
+        double Q = Qdepth(i, dx);
+        double Qoverk = Q/k;
+        for(int j = 1; j < Npoints-1; j++){
+            A(i,j) = Qoverk;
+        }
     }
 
     // Store initial conditions. 
@@ -815,25 +821,26 @@ int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev
         Aold(i, N-1) = 0.0; // Right side.
     }
 
-    
+    double Qtotal = Qt;
     // Start the iterative solver
     for(int k=0; k < MaxIterations; k++){
         double sum = 0.0;
         // Declare i and j from omp.
-        int i, j, Qtotal;
+        int i, j;
         // Start parallel task.
-        # pragma omp parallel default(shared) private(i,j, Qtotal) reduction(+:sum)
+        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
         {
             # pragma omp for
             for(int i=1; i < N-1; i++){
                 for(int j=1; j < N-1; j++){
-                    // Both Qt and Qdepth are in the correct units. 
-                    // Joules / Gy / km^3
-                    double Qtotal = Qdepth(i, dx) + Qt;
-
-                    // With physical constants. 
-                    A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                    Aold(i-1,j) + Aold(i,j-1) ) ) );
+                    if ( i*dx > 40){
+                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                                    Aold(i-1,j) + Aold(i,j-1) ) ) );
+                    }
+                    else{
+                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                                    Aold(i-1,j) + Aold(i,j-1) ) ) );
+                    }
                 }
             }
 
