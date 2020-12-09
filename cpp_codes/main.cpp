@@ -6,10 +6,7 @@ using namespace std;
 using namespace arma;
 
 int main(){
-    int n_x=100; int N_sum=12000;
-    //double tFinal=1e-6; double tStep=tFinal*0.1/5;
-    double tFinal=1.4e-7; double tStep=5e-10;
-    analytical_solution_1D(n_x, tFinal, tStep, N_sum);
+    run_5c();
 
     /*
     int dim; string lithosphereOrNot;

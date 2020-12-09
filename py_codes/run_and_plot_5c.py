@@ -16,30 +16,47 @@ if runCppCode == True:
     os.system("echo executing...")
     os.system("./main.out")
 
-#data = np.loadtxt(directory + filename, delimiter=",")
-#data = pd.DataFrame(data)
+resultsDirectory = "../results/1D_diffusion/"
 
-df_u_xt = pd.read_csv("../results/1D_diffusion/analytical_1D.csv", sep=',',header=None)
-u_xt_array = np.array(df_u_xt.values)
-df_v_xt = pd.read_csv("../results/1D_diffusion/v_xt.csv", sep=',',header=None)
-v_xt_array = np.array(df_v_xt.values)
-
-# Get the axis values (time t and space x):
-df_xList = pd.read_csv("../results/1D_diffusion/analytical_1D_xList.csv", sep=',',header=None)
-df_tList = pd.read_csv("../results/1D_diffusion/analytical_1D_tList.csv", sep=',',header=None)
+# Get the axes values (time t and space x):
+df_xList = pd.read_csv(resultsDirectory + "analytical_1D_xList.csv", sep=',',header=None)
+df_tList = pd.read_csv(resultsDirectory + "analytical_1D_tList.csv", sep=',',header=None)
 xList = np.array(df_xList.values)
 tList = np.array(df_tList.values)
+
+# Read the analytical results:
+df_u_xt = pd.read_csv(resultsDirectory + "analytical_1D.csv", sep=',',header=None)
+u_xt_array = np.array(df_u_xt.values)
+df_v_xt = pd.read_csv(resultsDirectory + "v_xt.csv", sep=',',header=None)
+v_xt_array = np.array(df_v_xt.values)
+
+# Read the explicit results:
+df_explicit = pd.read_csv(resultsDirectory + "explicit_1D.csv", sep=',',header=None)
+u_explicit_array = np.array(df_explicit.values)
+
+# Read the implicit results:
+df_implicit = pd.read_csv(resultsDirectory + "implicit_1D.csv", sep=',',header=None)
+u_implicit_array = np.array(df_implicit.values)
+
+# Read the Crank Nicolson results:
+df_crankNicolson = pd.read_csv(resultsDirectory + "crankNicolson_1D.csv", sep=',',header=None)
+u_crankNicolson_array = np.array(df_crankNicolson.values)
+
 
 X, T = np.meshgrid(xList, tList)
 #plt.pcolormesh(dataFrame)
 #plt.pcolor(xList, tList, u_xt_array)#, cmap=cm)
 
-#plotCodeWord = 'colormesh'
-plotCodeWord = 'oneFrame' # Plots u for one specified time.
+plotCodeWord = 'colormesh'
+#plotCodeWord = 'oneFrame' # Plots u for one specified time.
 #plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
 t_index = 10 # Which timestep should be plotted?
+time = tList[t_index]
 
 if plotCodeWord == 'colormesh':
+    #fig, ax = plt.subplots(2,2)#, figsize=(9,9), dpi = 80)
+    #ax = ax.flatten()
+
     plt.pcolor(X, T, u_xt_array)#, cmap=cm)
     #plt.pcolormesh(u_xt_array)
     #plot1, = plt.plot(xList, v_t_list)
@@ -52,7 +69,6 @@ elif plotCodeWord == 'oneFrame':
     t = tList[t_index]
     u_xt_list = u_xt_array[t_index, :] # u(x,t) at the specific time t.
     v_xt_list = v_xt_array[t_index, :]
-
     minus_f_x_list = (-ut.f(xList,1))[:,0]
 
     u_xt_list_simple_sum = v_xt_list + minus_f_x_list
@@ -61,7 +77,8 @@ elif plotCodeWord == 'oneFrame':
     plt.plot(xList, v_xt_list, label=r'$v(x,t)$', color='b')
     plt.plot(xList, -ut.f(xList,1), label=r'$x/L = -f(x)$', color='y')
     plt.plot(xList, u_xt_list_simple_sum, label=r'$u(x,t) = v(x,t)+x/L$', color='r')
-    plt.ylabel("u(x,t=" + format(float(t), '.7f') + ")")
+    
+    #plt.ylabel("u(x,t=" + str(t) + ")")
 
 elif plotCodeWord == 'animate':
     fig, ax = plt.subplots()
@@ -111,3 +128,4 @@ plt.suptitle('Analytical 1D solution, diffusion equation')
 plt.legend()
 plt.show()
 
+ 

@@ -11,23 +11,27 @@ void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, s
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
-double stabilityConditionExplicit_dt(double dx);
+arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
+
+void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
 
 void explicitScheme(int n, int tFinal, bool verbose);
 
+void explicitScheme_v2(int Nx, double tFinal, double tStep);
+
 void implicitScheme(int n, int tFinal, double tStep, bool verbose);
+
+void implicitScheme_v2(int n, double tFinal, double tStep);
 
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
 
-void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
+void crankNicolsonScheme_v2(int n, double tFinal, double tStep);
 
 void diffusion1D();
 
 void diffusion2D();
 
 void diffusion2DLithosphere();
-
-arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
 int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol);
 
@@ -36,5 +40,7 @@ int JacobiSolverLithosphere(int N, double dx, double dt, arma::mat &A, arma::mat
 double heatProduction(double time);
 
 double Qdepth(int j, double dt);
+
+void run_5c();
 
 #endif
