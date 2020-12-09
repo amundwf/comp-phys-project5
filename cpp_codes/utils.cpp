@@ -833,6 +833,11 @@ int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev
             # pragma omp for
             for(int i=1; i < N-1; i++){
                 for(int j=1; j < N-1; j++){
+
+                    // This part could be wrong and only in intial conditions. 
+                    // Qtotal = Qt + Qdepth(i, dx);
+
+                    // Add Q(t) only to the mantle , which is deeper than 40 km.
                     if ( i*dx > 40){
                         A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
                                     Aold(i-1,j) + Aold(i,j-1) ) ) );
