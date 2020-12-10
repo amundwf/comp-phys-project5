@@ -13,13 +13,21 @@ void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnL
 
 double stabilityConditionExplicit_dt(double dx);
 
+arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
+
+void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
+
 void explicitScheme(int n, int tFinal, bool verbose);
+
+void explicitScheme_v2(int Nx, double tFinal, double tStep);
 
 void implicitScheme(int n, int tFinal, double tStep, bool verbose);
 
+void implicitScheme_v2(int n, double tFinal, double tStep);
+
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
 
-void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
+void crankNicolsonScheme_v2(int n, double tFinal, double tStep);
 
 void diffusion1D();
 
@@ -46,5 +54,8 @@ double Qdepth(int j, double dt);
 void diffusion2DBeforeEnrichment();
 
 int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double eta);
+
+// 
+void run_5c();
 
 #endif

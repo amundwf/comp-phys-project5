@@ -32,7 +32,6 @@ void writeGeneralMatrixToCSV_noLabels(mat results, string filename, string direc
     results.save(filePath, csv_ascii);
 }
 
-
 vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     /* Returns solution to the Thomas algorith algorithm for a tri-
     diagonal matrix.
@@ -105,6 +104,164 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
     return unew;
 }
 
+void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal, double tStep, int N_sum){
+    // N_sum: Number of terms to include in the sum of the analytical solution.
+    // The higher N_sum is, the better the approximation will be.
+
+    double L = x_end-x_start;
+    // The constant k pre-calculates pi/L:
+    double k = M_PI/L;
+    double k2 = k*k;
+
+    // Make the list of x values. n_x values between x=0 and x=1.
+    double xStep = (x_end-x_start)/double(n_x-1);
+
+    vec xList = zeros(n_x);
+    for (int i=0; i<=n_x-1; i++){
+        xList(i) = i*xStep;
+    }
+    // Make the list of t values.
+    int tPoints = ceil(tFinal/tStep);
+    vec tList = zeros(tPoints);
+    for (int i=0; i<=tPoints-1; i++){
+        tList(i) = i*tStep;
+    }
+    // Now calculate the values of u(x,t) and put them in a 2D array:
+    mat v_xt_array = zeros(n_x, tPoints+1);
+    mat u_xt_array = zeros(n_x, tPoints);
+
+    for (int i=0; i<=n_x-1; i++){ // For all x
+        double x = xList(i);
+        for (int j=0; j<=tPoints-1; j++){ // For all t
+            double t = tList(j);
+            double v_xt = 0;
+
+            // Calculate the sum for v(x,t) (as in u(x,t)=v(x,t)-f(x)):
+            double sum_element;
+            for (int n=1; n<=N_sum; n++){
+                sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                v_xt += sum_element;
+                // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
+            }
+
+            v_xt *= 2/M_PI; // Multiply with 2/pi to get the correct value
+            // Add u(x,t) to u_xt_array:
+            v_xt_array(i,j) = v_xt;
+            u_xt_array(i,j) = v_xt + (x/L);
+        }
+    }
+
+    // Save the results:
+    string directory = "../results/1D_diffusion/";
+    writeGeneralMatrixToCSV_noLabels(v_xt_array.t(), "v_xt.csv", directory);
+    writeGeneralMatrixToCSV_noLabels(u_xt_array.t(), "analytical_1D.csv", directory);
+    // ^ u_xt_array is transposed to get the plots right.
+    // Also save xList and tList for plotting:
+    writeGeneralMatrixToCSV_noLabels(xList, "analytical_1D_xList.csv", directory);
+    writeGeneralMatrixToCSV_noLabels(tList, "analytical_1D_tList.csv", directory);
+}
+
+void explicitScheme(int n, int tFinal, bool verbose ){
+    // First we set initialise the new and old vectors
+    // Set boundary conditions.
+    // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
+    vec u = vec(n, fill::zeros);
+    vec unew = vec(n, fill::zeros);
+    u(0) = unew(0) = 0.0;
+    u(n-1) = unew(n-1) = 1.0;
+
+    // Evaluate Delta x.
+    double xStep = (u(n-1) - u(0)) / (n-1);
+
+    // Find Delta t and the number of time steps to get to tFinal.
+    // Stability criteria, constrains t step. 
+    double tStep = xStep*xStep/2;
+    // Round upwards.
+    int tPoints = ceil(tFinal/ tStep);  
+
+    // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
+    double alpha = tStep / (xStep*xStep);
+
+    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "N is:      " << n <<endl;
+    cout << "xStep is:  " << xStep <<endl;
+    cout << "tFinal is: " << tFinal <<endl;
+    cout << "tStep is:  " << tStep <<endl;
+    cout << "tPoints is: " << tPoints <<endl;
+    
+    // Set up the table to store solution at all time steps.
+    mat results = mat(tPoints+1, n);
+
+    // Add initial results to matrix.
+    results(0, span(0,n-1)) = u.t();
+
+    // Time integration
+    for (int t = 1; t <= tPoints; t++) {
+        for (int i = 1; i < n-1; i++) {
+            // Discretized diff eq
+            unew(i) = alpha * u(i-1) + (1 - 2*alpha) * u(i) + alpha * u(i+1);
+        }
+        //  note that the boundaries are not changed.
+        results(t, span(0,n-1)) = unew.t();
+        u = unew;
+    }  
+    
+    // Save the results.
+    string directory = "../results/1D_diffusion/";
+    string filename = "Explicit_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
+    writeGeneralMatrixToCSV_noLabels(results, filename, directory);
+}
+
+void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, double tStep){
+    // This does the same as explicitScheme(), but now with tStep as an input.
+    // n: Number of x points.
+    double xStep = (x_end-x_start)/double(n-1);
+
+    // Boundary conditions for u(x,t):
+    vec u = vec(n, fill::zeros);
+    vec unew = vec(n, fill::zeros);
+    u(0) = unew(0) = 0.0;
+    u(n-1) = unew(n-1) = 1.0;
+
+    int tPoints = ceil(tFinal/tStep); // Number of time steps.
+
+    // Evaluate alpha , i.e Delta t / (Delta x * Delta x).
+    double alpha = tStep / (xStep*xStep);
+
+    cout << "\nRunning Explicit Scheme ..." << endl;
+    cout << "Nx is:      " << n <<endl;
+    cout << "xStep is:  " << xStep <<endl;
+    cout << "tFinal is: " << tFinal <<endl;
+    cout << "tStep is:  " << tStep <<endl;
+    cout << "tPoints is: " << tPoints <<endl;
+
+    // Set up the table to store solution at all time steps.
+    mat results = mat(tPoints+1, n);
+
+    // Add initial results to matrix.
+    results(0, span(0,n-1)) = u.t();
+
+    // Time integration
+    for (int t = 1; t <= tPoints; t++) {
+        for (int i = 1; i < n-1; i++) {
+            // Discretized diff eq
+            unew(i) = alpha * u(i-1) + (1 - 2*alpha) * u(i) + alpha * u(i+1);
+        }
+        //  note that the boundaries are not changed.
+        results(t, span(0,n-1)) = unew.t();
+        u = unew;
+    }
+
+    cout << "results.n_cols: " << results.n_cols << endl;
+    cout << "results.n_rows: " << results.n_rows << endl;
+    results.print("results explicit:");
+
+    // Save the results.
+    string directory = "../results/1D_diffusion/";
+    string filename = "explicit_1D.csv";
+    writeGeneralMatrixToCSV_noLabels(results, filename, directory);
+}
+
 void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     // First we set initialise the new and old vectors
     // Set boundary conditions.
@@ -123,7 +280,7 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     double xStep = (u(n-1) - u(0)) / (n-1);
 
     // Find Delta t and the number of time steps to get to tFinal.
-    int tPoints = int(tFinal/ tStep);
+    int tPoints = ceil(tFinal/ tStep);
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
@@ -173,41 +330,32 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
         writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
-double stabilityConditionExplicit_dt(double dx){
-    // Returns a value for dt which is small enough to fulfill the stability 
-    // condition for the explicit scheme. The stability condition is dt/dx^2<=0.5,
-    // or dt <= 0.5*(dx^2).
-    double dt = 0.4*(dx*dx);
-    return dt;
-}
-
-void explicitScheme(int n, int tFinal, bool verbose ){
-    // First we set initialise the new and old vectors
-    // Set boundary conditions.
-    // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
+void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, double tStep){
+    // Same as implicitScheme(), but saving the results file with a different name.
     vec u = vec(n, fill::zeros);
     vec unew = vec(n, fill::zeros);
-    u(0) = unew(0) = 0.0;
-    u(n-1) = unew(n-1) = 1.0;
 
-    // Evaluate Delta x.
-    double xStep = (u(n-1) - u(0)) / (n-1);
+    double xStep = (x_end-x_start)/double(n-1);
+
+    // Set the boundary conditions.
+    double u_0 = 0.0;
+    double u_n = 1.0;
+    u(0) = unew(0) = u_0;
+    u(n-1) = unew(n-1) = u_n;
 
     // Find Delta t and the number of time steps to get to tFinal.
-    // Stability criteria, constrains t step. 
-    double tStep = xStep*xStep/2;
-    // Round upwards.
-    int tPoints = ceil(tFinal/ tStep);  
+    int tPoints = ceil(tFinal/ tStep);
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). 
     double alpha = tStep / (xStep*xStep);
 
-    cout << "\nRunning Explicit Scheme ..." << endl;
-    cout << "N is:      " << n <<endl;
-    cout << "xStep is:  " << xStep <<endl;
-    cout << "tFinal is: " << tFinal <<endl;
-    cout << "tStep is:  " << tStep <<endl;
+    cout << "\nRunning Implicit Scheme ..." << endl;
+    cout << "N is:       " << n <<endl;
+    cout << "xStep is:   " << xStep <<endl;
+    cout << "tFinal is:  " << tFinal <<endl;
+    cout << "tStep is:   " << tStep <<endl;
     cout << "tPoints is: " << tPoints <<endl;
+    cout << "alpha is:   " << alpha << endl;
     
     // Set up the table to store solution at all time steps.
     mat results = mat(tPoints+1, n);
@@ -215,21 +363,42 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     // Add initial results to matrix.
     results(0, span(0,n-1)) = u.t();
 
-    // Time integration
-    for (int t = 1; t <= tPoints; t++) {
-        for (int i = 1; i < n-1; i++) {
-            // Discretized diff eq
-            unew(i) = alpha * u(i-1) + (1 - 2*alpha) * u(i) + alpha * u(i+1);
-        }
+    double b = 1 + 2*alpha;
+    double a = -alpha;
+    double hh = xStep*xStep;
+
+    // Multiply by hh. 
+    u = u*hh;
+
+    bool verbose = false;
+    for (int t = 1; t < 4; t++) {
+        //cout << "\nt is: " << t << endl;
+
+        vec unew = ThomasAlgorithm(n, u, a, b, verbose);
         //  note that the boundaries are not changed.
+
         results(t, span(0,n-1)) = unew.t();
         u = unew;
     }  
+
+    for (int t = 4; t <= tPoints; t++) {
+        vec unew = ThomasAlgorithm(n, u, a, b, verbose);
+        // Note that the boundaries are not changed.
+        results(t, span(0,n-1)) = unew.t();
+        u = unew;
+    }
     
+    cout << "results.n_cols: " << results.n_cols << endl;
+    cout << "results.n_rows: " << results.n_rows << endl;
+    results.print("results implicit:");
+    results(0,span::all).print("row idx = 0:");
+    results(tPoints-1,span::all).print("row idx = tPoints-1:");
+    results(tPoints,span::all).print("row idx = tPoints:");
+
     // Save the results.
-        string directory = "../results/1D_diffusion/";
-        string filename = "Explicit_N=" + to_string(n) + "_tPoints=" + to_string(tPoints) + ".csv";
-        writeGeneralMatrixToCSV_noLabels(results, filename, directory);
+    string directory = "../results/1D_diffusion/";
+    string filename = "implicit_1D.csv";
+    writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
@@ -246,7 +415,7 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     double xStep = (u(n-1)- u(0)) / (n-1);
     // Find Delta t and the number of time steps to get to tFinal.
 
-    int tPoints = int(tFinal/ tStep);
+    int tPoints = ceil(tFinal/ tStep);
 
     // Evaluate alpha , i.e Delta t / (Delta x * Delta x). and the diagonals. 
     double alpha = tStep / (xStep*xStep);
@@ -295,59 +464,68 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
-void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum){
-    // N_sum: Number of terms to include in the sum of the analytical solution.
-    // The higher N_sum is, the better the approximation will be.
+void crankNicolsonScheme_v2(int n, double x_start, double x_end, double tFinal, double tStep){
+    // This function does the same as crankNicolsonScheme(), but changes the saved
+    // results file name.
 
-    // k is meant to pre-calculate pi/L, but it's kind of pointless since L=1. But
-    // I just left it like this. :)
-    double k = M_PI;
-    double k2 = k*k;
+    // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
+    vec u = vec(n, fill::zeros);
+    vec r = vec(n, fill::zeros);
+    vec unew = vec(n+1, fill::zeros);
+    u(0) = unew(0) = 0.0;
+    u(n-1) = unew(n-1) = 1.0;
 
-    // Make the list of x values. n_x values between x=0 and x=1.
-    double xStep = 1.0/double(n_x-1);
-    vec xList = zeros(n_x);
-    for (int i=0; i<=n_x-1; i++){
-        xList(i) = i*xStep;
-    }
-    // Make the list of t values.
-    int tPoints = int(tFinal/tStep);
-    vec tList = zeros(tPoints);
-    for (int i=0; i<=tPoints-1; i++){
-        tList(i) = i*tStep;
-    }
-    //xList.print("xList:"); tList.print("tList:");
+    // Evaluate Delta x.
+    double xStep = (u(n-1)- u(0)) / (n-1);
+    // Find Delta t and the number of time steps to get to tFinal.
 
-    // Now calculate the values of u(x,t) and put them in a 2D array:
-    mat v_xt_array = zeros(n_x, tPoints);
-    mat u_xt_array = zeros(n_x, tPoints);
+    int tPoints = ceil(tFinal/tStep);
 
-    for (int i=0; i<=n_x-1; i++){ // For all x
-        double x = xList(i);
-        for (int j=0; j<=tPoints-1; j++){ // For all t
-            double t = tList(j);
-            double v_xt = 0;
-            double u_xt = 0;
-            // Calculate the sum for u(x,t):
-            for (int n=1; n<=N_sum; n++){
-                double sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
-                v_xt += sum_element;
-                u_xt += sum_element + x;
-                // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
-            }
-            // Add u(x,t) to u_xt_array:
-            v_xt_array(i,j) = v_xt;
-            u_xt_array(i,j) = u_xt;
+    // Evaluate alpha , i.e Delta t / (Delta x * Delta x). and the diagonals. 
+    double alpha = tStep/(xStep*xStep);
+    double a = - alpha;
+    double b = 2 + 2*alpha;
+    double hh = xStep*xStep;
+
+    // Need to scale by xStep*xStep.
+    u = u*hh;
+
+    cout << "\nRunning Crank Nicolson scheme ..." << endl;
+    cout << "Npoints is:   " << n <<endl;
+    cout << "xStep is:     " << xStep <<endl;
+    cout << "tFinal is:    " << tFinal <<endl;
+    cout << "tStep is:     " << tStep <<endl;
+    cout << "tPoints is:   " << tPoints <<endl;
+    
+    // Set up the table to store solution at all time steps.
+    mat results = mat(tPoints+1, n);
+
+    // Add initial results to matrix.
+    results(0, span(0,n-1)) = u.t();
+
+    bool verbose = false;
+    // Time integration
+    for (int t = 1; t <= tPoints; t++) {
+        // Calculate the right hand side for CN. 
+        for (int i = 1; i < n-1; i++) {
+        	r(i) = alpha*u(i-1) + (2 - 2*alpha)*u(i) + alpha*u(i+1);
         }
-    }
+        r(0) = 0.0;
+        r(n-1) = 1.0;
+
+        // Run Thomas algo
+        vec unew = ThomasAlgorithm(n, r, a, b, verbose);
+
+        // Add data to results. 
+        results(t, span(0,n-1)) = unew.t();
+        // Reset u for the next time step.
+        u = unew;
+    }  
+    
     // Save the results.
     string directory = "../results/1D_diffusion/";
-    writeGeneralMatrixToCSV_noLabels(v_xt_array.t(), "v_xt.csv", directory);
-    writeGeneralMatrixToCSV_noLabels(u_xt_array.t(), "analytical_1D.csv", directory);
-    // ^ u_xt_array is transposed to get the plots right.
-    // Also save xList and tList for plotting:
-    writeGeneralMatrixToCSV_noLabels(xList, "analytical_1D_xList.csv", directory);
-    writeGeneralMatrixToCSV_noLabels(tList, "analytical_1D_tList.csv", directory);
+    string filename = "crankNicolson_1D.csv";
+    writeGeneralMatrixToCSV_noLabels(results, filename, directory); 
 }
 
 void diffusion1D(){
@@ -915,4 +1093,22 @@ double Qdepth(int i, double dx){
     }
     // Else return Qdepth if greater than 40 km.
     return 0.05 * 3.15e19;
+}
+void run_5c(){
+    double tFinal = 1; // Final time
+    int Nx = 10; // Number of x points between 0 and L=1. In 5c: 10 or 100)
+    double x_start = 0; double x_end = 1;
+    double dx = (x_end-x_start)/double(Nx-1);
+    double dt = 0.5*(dx*dx); // Explicit scheme stability condition.
+
+    int N_sum = 10000; // The number of terms to include in the sum of the
+    // analytical solution.
+
+    // Get the results (saved in .csv files):
+
+    analytical_solution_1D(Nx, x_start, x_end, tFinal, dt, N_sum);
+    explicitScheme_v2(Nx, x_start, x_end, tFinal, dt);
+    implicitScheme_v2(Nx, x_start, x_end, tFinal, dt);
+    //implicitScheme(Nx, tFinal, dt, true);
+    crankNicolsonScheme_v2(Nx, x_start, x_end, tFinal, dt);
 }
