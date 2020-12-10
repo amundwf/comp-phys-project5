@@ -35,6 +35,8 @@ Q7: Please enter the distance step (dx) in km
 Code running ...
 ```
 
+Please note that the code runs with OpenMP for the two dimensional case and that NUM_THREADS is set to 8. If the number of nodes in your computer is different please change this at the top of utils.cpp. 
+
 The plotting scripts are written in python. They can be found in the folder ./py_codes. There are several options for one dimensional plotting or two dimensional plotting.
 
 ## One dimensional analytic solution Gif.
