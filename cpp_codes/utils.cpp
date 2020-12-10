@@ -179,7 +179,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
     writeGeneralMatrixToCSV_noLabels(tList, "analytical_1D_tList.csv", directory);
 }
 
-void explicitScheme(int n, double x_start, double x_end, int tFinal, bool verbose ){
+void explicitScheme(int n, double x_start, double x_end, double tFinal, bool verbose ){
     /* A function which runs the explicit scheme (forward euler) for the 
     one dimensional case.
 
@@ -295,7 +295,7 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
-void implicitScheme(int n, double x_start, double x_end, int tFinal, double tStep, bool verbose){
+void implicitScheme(int n, double x_start, double x_end, double tFinal, double tStep, bool verbose){
     /* A function which runs the implicit scheme (backward euler) for the 
     one dimensional case.
 
@@ -450,7 +450,7 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
-void crankNicolsonScheme(int n, double x_start, double x_end, int tFinal, double tStep, bool verbose){
+void crankNicolsonScheme(int n, double x_start, double x_end, double tFinal, double tStep, bool verbose){
     /* A function which runs the Crank Nicolson for the 
     one dimensional case, which is a mix between forward and 
     backward schemes.
