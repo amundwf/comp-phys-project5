@@ -146,6 +146,8 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
     mat v_xt_array = zeros(n_x, tPoints+1);
     mat u_xt_array = zeros(n_x, tPoints);
 
+    cout << "\nRunning analytical solution..." << endl; 
+
     for (int i=0; i<=n_x-1; i++){ // For all x
         double x = xList(i);
         for (int j=0; j<=tPoints-1; j++){ // For all t
@@ -157,7 +159,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
             int n;
             # pragma omp parallel for default(shared) private (n) reduction(+:v_xt)
             for (int n=1; n<=N_sum; n++){
-                sum_element = (1/n)*pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                sum_element = (1/n)*pow(-1,n)*sin(k*n*x)*exp(-k2*(n*n)*t);
                 v_xt += sum_element;
                 // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
             }
@@ -860,7 +862,7 @@ void diffusion2DBeforeEnrichment(){
     // What about the time step..
     cout << "Please enter a time step (dt) in Gy (double)" << endl;
     cin >> dt;
-    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
+    cout << "You have chosen dt= " << dt*1e9 << " years" << endl;
 
     // How deep in km
     cout << "Please enter max depth in km. Note that there are changes to heat production between 0 and 120 km" << endl;
@@ -889,8 +891,8 @@ void diffusion2DBeforeEnrichment(){
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
 
-    double eta = k*beta*dt/(dx*dx);
-    cout << "The constant eta is: " << eta << endl;
+    //double eta = k*beta*dt/(dx*dx);
+    //cout << "The constant eta is: " << eta << endl;
 
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
@@ -913,7 +915,7 @@ void diffusion2DBeforeEnrichment(){
         double time = dt*t; // time should be in Gy. 
         A_prev = A;
 
-        int itcount = JacobiSolverBeforeEnrichment(Npoints,dx,dt,A,A_prev,tolerance,eta);
+        int itcount = JacobiSolverBeforeEnrichment(Npoints,dx,dt,A,A_prev,tolerance,k,beta);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
@@ -928,7 +930,7 @@ void diffusion2DBeforeEnrichment(){
     results.save(filePath, raw_ascii);
 }
 
-int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double eta){
+int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double k, double beta){
     /* Function for the iterative Jacobi solver. The function returns
     the iteration it converges at, or the maxiteration without convergence.
 
@@ -978,9 +980,12 @@ int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_pre
             for(int i=1; i < N-1; i++){
                 for(int j=1; j < N-1; j++){
                     
-                    // With physical constants. 
-                    A(i,j) = (1/(1 + 4*eta))*( A_prev(i,j) + eta*( Aold(i+1,j) + Aold(i,j+1) + 
-                    Aold(i-1,j) + Aold(i,j-1) ) );
+                // This part could be wrong and only in intial conditions. 
+                double Qi = Qdepth(i, dx);
+
+                A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qi + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                            Aold(i-1,j) + Aold(i,j-1) ) ) );
+                    
                 }
             }
 
@@ -1071,15 +1076,16 @@ void diffusion2DAfterEnrichment(){
         A(i,0) = 0.0; // Left side.
         A(i, Npoints-1) = 0.0; // Right side.
     }
-
+    /*
     // Add initial heat production conditions.
     for(int i = 1; i < Npoints-1; i++){
         double Q = Qdepth(i, dx);
         double Qoverk = Q/k;
         for(int j = 1; j < Npoints-1; j++){
-            A(i,j) = Qoverk;
+            A(i,j) = - Qoverk;
         }
     }
+    */
 
     // Store initial conditions. 
     results(span::all, span::all, span(0)) = A;
@@ -1148,7 +1154,6 @@ int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev
         Aold(i, N-1) = 0.0; // Right side.
     }
 
-    double Qtotal = Qt;
     // Start the iterative solver
     for(int k=0; k < MaxIterations; k++){
         double sum = 0.0;
@@ -1162,15 +1167,16 @@ int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev
                 for(int j=1; j < N-1; j++){
 
                     // This part could be wrong and only in intial conditions. 
-                    // Qtotal = Qt + Qdepth(i, dx);
+                    double Qi = Qdepth(i, dx);
 
                     // Add Q(t) only to the mantle , which is deeper than 40 km.
                     if ( i*dx > 40){
+                        double Qtotal = Qi + Qt;
                         A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
                                     Aold(i-1,j) + Aold(i,j-1) ) ) );
                     }
                     else{
-                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
+                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qi + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
                                     Aold(i-1,j) + Aold(i,j-1) ) ) );
                     }
                 }

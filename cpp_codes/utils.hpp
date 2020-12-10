@@ -52,7 +52,7 @@ double Qdepth(int j, double dt);
 
 void diffusion2DBeforeEnrichment();
 
-int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double eta);
+int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double k, double beta);
 
 // one dimensional schemes without inputs from terminal.
 
