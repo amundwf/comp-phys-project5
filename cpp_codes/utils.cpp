@@ -405,6 +405,7 @@ void diffusion2D(){
 
     int Tpoints = int(tFinal / dt);
     double tolerance = 1.0e-14;
+    double totalRelativeError = 0.0;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);
@@ -447,16 +448,19 @@ void diffusion2D(){
             for(int j=0; j < Npoints; j++){
                 // I removed the mius sign in exact.
                 A_analytic(i,j) = sin(M_PI*dx*i)*sin(M_PI*dx*j)*exp(-2*M_PI*M_PI*time);
-                sum += fabs( (A(i,j) - A_analytic(i,j)) );
+                sum += fabs( (A(i,j) - A_analytic(i,j))) ;
             }
         }
         // Store analytic result.
         resultsAnalytic( span::all, span::all, span(t)) = A_analytic;
-
+        //totalRelativeError += sum;
         cout << setprecision(5) << setiosflags(ios::scientific);
         cout << "Jacobi method with error " << sum/Npoints << " in " << itcount << " iterations" << endl;
     }
     // End time loop.
+
+    // Relative error per point
+    //cout << "The relative error per point is: " << totalRelativeError/Npoints << endl;
 
     ofstream ofile;
     string directory = "../results/2D_diffusion/";
@@ -554,12 +558,12 @@ void diffusion2DBeforeEnrichment(){
     cin >> tFinal;
 
     // What about the time step..
-    cout << "What time step in Gy (double)" << endl;
+    cout << "Please enter a time step (dt) in Gy (double)" << endl;
     cin >> dt;
     cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
 
     // How deep in km
-    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
+    cout << "Please enter max depth in km. Note that there are changes to heat production between 0 and 120 km" << endl;
     cin >> maxDepth;
 
     // What about the distance step..
