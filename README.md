@@ -36,6 +36,11 @@ Code running ...
 ```
 
 The plotting scripts are written in python. They can be found in the folder ./py_codes. There are several options for one dimensional plotting or two dimensional plotting.
+
+## One dimensional analytic solution Gif.
+
+Add Gif here.
+
 ## Contributors
 
 James Claxton and Amund Fredriksen
