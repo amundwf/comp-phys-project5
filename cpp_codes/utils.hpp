@@ -4,12 +4,15 @@
 #include <iostream>
 #include <armadillo>
 
+// Saving matrices to file.
 
 void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, std::string directory);
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
 // Functions for the 1D diffusion equation.
+
+void diffusion1D();
 
 double stabilityConditionExplicit_dt(double dx);
 
@@ -29,9 +32,6 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
 
 void crankNicolsonScheme_v2(int n, double tFinal, double tStep);
 
-void diffusion1D();
-
-arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
 // Solver for the 2D diffusion equation.
 
@@ -39,7 +39,7 @@ void diffusion2D();
 
 int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol);
 
-// Functions for after radioactive enrichment
+// Functions for after radioactive enrichment.
 
 void diffusion2DAfterEnrichment();
 
@@ -49,13 +49,14 @@ double Qtime(double time);
 
 double Qdepth(int j, double dt);
 
-// Temporary functions for before enrichment..
+// Temporary functions for before enrichment.
 
 void diffusion2DBeforeEnrichment();
 
 int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double eta);
 
-// 
+// one dimensional schemes without inputs from terminal.
+
 void run_5c();
 
 #endif
