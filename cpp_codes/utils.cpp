@@ -179,7 +179,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
     writeGeneralMatrixToCSV_noLabels(tList, "analytical_1D_tList.csv", directory);
 }
 
-void explicitScheme(int n, int tFinal, bool verbose ){
+void explicitScheme(int n, double x_start, double x_end, int tFinal, bool verbose ){
     /* A function which runs the explicit scheme (forward euler) for the 
     one dimensional case.
 
@@ -200,8 +200,8 @@ void explicitScheme(int n, int tFinal, bool verbose ){
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
     vec u = vec(n, fill::zeros);
     vec unew = vec(n, fill::zeros);
-    u(0) = unew(0) = 0.0;
-    u(n-1) = unew(n-1) = 1.0;
+    u(0) = unew(0) = x_start;
+    u(n-1) = unew(n-1) = x_end;
 
     // Evaluate Delta x.
     double xStep = (u(n-1) - u(0)) / (n-1);
@@ -295,7 +295,7 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
-void implicitScheme(int n, int tFinal, double tStep, bool verbose){
+void implicitScheme(int n, double x_start, double x_end, int tFinal, double tStep, bool verbose){
     /* A function which runs the implicit scheme (backward euler) for the 
     one dimensional case.
 
@@ -319,8 +319,8 @@ void implicitScheme(int n, int tFinal, double tStep, bool verbose){
     vec unew = vec(n, fill::zeros);
 
     // Set the boundary conditions.
-    double u_0 = 0.0;
-    double u_n = 1.0;
+    double u_0 = x_start;
+    double u_n = x_end;
 
     u(0) = unew(0) = u_0;
     u(n-1) = unew(n-1) = u_n;
@@ -450,7 +450,7 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
     writeGeneralMatrixToCSV_noLabels(results, filename, directory);
 }
 
-void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
+void crankNicolsonScheme(int n, double x_start, double x_end, int tFinal, double tStep, bool verbose){
     /* A function which runs the Crank Nicolson for the 
     one dimensional case, which is a mix between forward and 
     backward schemes.
@@ -474,8 +474,8 @@ void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
     vec u = vec(n, fill::zeros);
     vec r = vec(n, fill::zeros);
     vec unew = vec(n+1, fill::zeros);
-    u(0) = unew(0) = 0.0;
-    u(n-1) = unew(n-1) = 1.0;
+    u(0) = unew(0) = x_start;
+    u(n-1) = unew(n-1) = x_end;
 
     // Evaluate Delta x.
     double xStep = (u(n-1)- u(0)) / (n-1);
@@ -606,26 +606,37 @@ void diffusion1D(){
     */
 
     double tFinal; int Npoints; double dt; string verboseOrNot; bool verbose; double x_start; double x_end;
-    
-    cout << "Please enter x_start (double)..." << endl;
+    string dtExplicitOrNot;
+
+    cout << "Please enter x_start (double)" << endl;
     cin >> x_start;
 
-    cout << "Please enter x_end (double)..." << endl;
+    cout << "Please enter x_end (double)" << endl;
     cin >> x_end;
 
-    cout << "Please enter Npoints (int)..." << endl;
+    cout << "Please enter Npoints (int)" << endl;
     cin >> Npoints;
 
     double dx = (x_end-x_start)/(Npoints-1);
     cout << "dx is: " << dx << endl;
 
-    cout << "Please enter tFinal (can be double)..." << endl;
+    cout << "\nPlease enter tFinal (double)" << endl;
     cin >> tFinal;
     
-    cout << "Please enter dt for Implicit and Crank Nicolson (double)..." << endl;
-    cin >> dt;
+    cout << "Do you want to use dt dictated by the explicit scheme? [Y/N]" << endl;
+    cin << dtExplicitOrNot;
 
-    cout << "Do you want verbose? (Y/N)?";
+    if (dtExplicitOrNot == "y"){
+        // Set dt to the same as explicit
+        dt = (dx*dx)/2;
+
+    } else{
+        cout << "Please enter dt for Implicit and Crank Nicolson schemes(double)" << endl;
+        // Ask for dt instead.
+        cin >> dt;
+    }
+
+    cout << "Do you want to print info to terminal? (Y/N)?";
     cin >> verboseOrNot;
 
     if (verboseOrNot == "y"){
@@ -635,14 +646,12 @@ void diffusion1D(){
         verbose = false;
     }
 
-    // Set dt to the same as explicit
-    dt = (dx*dx)/2;
     // The number which the analytic solution should go to.
     int N_sum = 10000;
 
-    explicitScheme(Npoints, tFinal, verbose);
-    implicitScheme(Npoints, tFinal, dt, verbose);
-    crankNicolsonScheme(Npoints, tFinal, dt, verbose);
+    explicitScheme(Npoints, x_start, x_end, tFinal, verbose);
+    implicitScheme(Npoints, x_start, x_end, tFinal, dt, verbose);
+    crankNicolsonScheme(Npoints, x_start, x_end, tFinal, dt, verbose);
     analytical_solution_1D(Npoints, x_start, x_end, tFinal, dt, N_sum);
 }
 
