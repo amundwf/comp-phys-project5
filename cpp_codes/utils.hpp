@@ -4,42 +4,57 @@
 #include <iostream>
 #include <armadillo>
 
-
-//double* Thomas_algo(int n, double x_0, double x_np1, int a, int b)
+// Saving matrices to file.
 
 void writeGeneralMatrixToCSV_noLabels(arma::mat results, std::string filename, std::string directory);
 
 void writeGeneralMatrixToCSV(arma::mat results, arma::field<std::string> columnLabels, std::string filename, std::string directory);
 
+// Functions for the 1D diffusion equation.
+
+double stabilityConditionExplicit_dt(double dx);
+
 arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
-void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
+void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal, double tStep, int N_sum);
 
-void explicitScheme(int n, int tFinal, bool verbose);
+void explicitScheme(int n, double x_start, double x_end, double tFinal,  bool verbose);
 
 void explicitScheme_v2(int Nx, double tFinal, double tStep);
 
-void implicitScheme(int n, int tFinal, double tStep, bool verbose);
+void implicitScheme(int n, double x_start, double x_end, double tFinal,  double tStep, bool verbose);
 
 void implicitScheme_v2(int n, double tFinal, double tStep);
 
-void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose);
+void crankNicolsonScheme(int n, double x_start, double x_end, double tFinal,  double tStep, bool verbose);
 
 void crankNicolsonScheme_v2(int n, double tFinal, double tStep);
 
 void diffusion1D();
 
-void diffusion2D();
+// Solver for the 2D diffusion equation.
 
-void diffusion2DLithosphere();
+void diffusion2D();
 
 int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol);
 
-int JacobiSolverLithosphere(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double Qt, double k, double beta);
+// Functions for after radioactive enrichment.
 
-double heatProduction(double time);
+void diffusion2DAfterEnrichment();
+
+int JacobiSolverAfterEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double Qt, double k, double beta);
+
+double Qtime(double time);
 
 double Qdepth(int j, double dt);
+
+// Temporary functions for before enrichment.
+
+void diffusion2DBeforeEnrichment();
+
+int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double k, double beta);
+
+// one dimensional schemes without inputs from terminal.
 
 void run_5c();
 

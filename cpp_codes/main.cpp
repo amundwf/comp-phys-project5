@@ -6,9 +6,10 @@ using namespace std;
 using namespace arma;
 
 int main(){
+    /*
     run_5c();
 
-    /*
+    */
     int dim; string lithosphereOrNot;
     
     cout << "Please enter if you want to run in 1D or 2D diffusion equation (int)" << endl;
@@ -20,17 +21,26 @@ int main(){
     }
     
     if (dim == 2){
-        cout << "Do you want to run the function for the Lithosphere? [Y/N]" << endl;
+        cout << "Do you want to run the Lithosphere problem [Y] or Unit Test [N]? [Y/N]" << endl;
         cin >> lithosphereOrNot;
 
         if (lithosphereOrNot == "y"){
-            diffusion2DLithosphere();
+            string BeforeEnrichmentOrNot;
+            cout << "Do you want to run before enrichment? [Y/N]" << endl;
+            cin >> BeforeEnrichmentOrNot;
+
+            if (BeforeEnrichmentOrNot == "y"){
+                diffusion2DBeforeEnrichment();
+            }
+            else{
+                diffusion2DAfterEnrichment();
+            }
         }
         else{
             diffusion2D();
         }
     }
-    */
+    
 
     return 0;
 }
