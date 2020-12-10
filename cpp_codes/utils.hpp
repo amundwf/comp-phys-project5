@@ -20,18 +20,17 @@ arma::vec ThomasAlgorithm(int n, arma::vec u, double a, double b, bool verbose);
 
 void analytical_solution_1D(int n_x, double tFinal, double tStep, int N_sum);
 
-void explicitScheme(int n, int tFinal, double x_start, double x_end, bool verbose);
+void explicitScheme(int n, double tFinal, double x_start, double x_end, bool verbose);
 
 void explicitScheme_v2(int Nx, double tFinal, double tStep);
 
-void implicitScheme(int n, int tFinal, double x_start, double x_end, double tStep, bool verbose);
+void implicitScheme(int n, double tFinal, double x_start, double x_end, double tStep, bool verbose);
 
 void implicitScheme_v2(int n, double tFinal, double tStep);
 
-void crankNicolsonScheme(int n, int tFinal, double x_start, double x_end, double tStep, bool verbose);
+void crankNicolsonScheme(int n, double tFinal, double x_start, double x_end, double tStep, bool verbose);
 
 void crankNicolsonScheme_v2(int n, double tFinal, double tStep);
-
 
 // Solver for the 2D diffusion equation.
 
