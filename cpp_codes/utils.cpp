@@ -157,7 +157,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
             int n;
             # pragma omp parallel for default(shared) private (n) reduction(+:v_xt)
             for (int n=1; n<=N_sum; n++){
-                sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                sum_element = pow(-1,n)*sin(k*n*x)*exp(-k2*(n*n)*t);
                 v_xt += sum_element;
                 // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
             }
