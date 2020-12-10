@@ -10,7 +10,7 @@ The c++ scripts can be run from the make file within ./cpp_codes. There you will
 
 
 Below is an example...
-'''bash
+```bash
 Q1: Please enter if you want to run in 1D or 2D diffusion equation (int)
 2
 
@@ -33,8 +33,9 @@ Q7: Please enter the distance step (dx) in km
 0.01
 
 Code running ...
-'''
+```
 
+The plotting scripts are written in python. They can be found in the folder ./py_codes. There are several options for one dimensional plotting or two dimensional plotting.
 ## Contributors
 
 James Claxton and Amund Fredriksen
