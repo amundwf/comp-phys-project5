@@ -554,9 +554,13 @@ void diffusion1D(){
         verbose = false;
     }
 
+    // The number which the analytic solution should go to.
+    int N_sum = 10000;
+
     explicitScheme(Npoints, tFinal, verbose);
     implicitScheme(Npoints, tFinal, dt, verbose);
     crankNicolsonScheme(Npoints, tFinal, dt, verbose);
+    analytical_solution_1D(Npoints, 1.0, 0.0, tFinal, dt, N_sum);
 }
 
 
