@@ -24,7 +24,7 @@ int main(){
     }
     
     if (dim == 2){
-        cout << "Do you want to run the function for the Lithosphere [Y] or Unit Test [N]? [Y/N]" << endl;
+        cout << "Do you want to run the Lithosphere problem [Y] or Unit Test [N]? [Y/N]" << endl;
         cin >> lithosphereOrNot;
 
         if (lithosphereOrNot == "y"){
