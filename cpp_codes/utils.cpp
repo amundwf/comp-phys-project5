@@ -22,13 +22,13 @@ void writeGeneralMatrixToCSV(mat results, field<string> columnLabels, string fil
 }
 
 void writeGeneralMatrixToCSV_noLabels(mat results, string filename, string directory){
-    // columnLabels contains the labels of the columns, e.g. "t", "x", "y", "z" or "t", "L".
-    // It should have the same amount of elements as 'results' has columns.
+    // Saves the arma::mat. ALthough not as a csv but as ascii. 
+    // I could be better to change the name of this function to not make
+    // it confusing. 
     ofstream ofile;
     string filePath = directory + filename;
 
-    // Save matrix in CSV format with the column labels in the header:
-    //results.save(csv_name("results.csv", header));
+    // Save matrix in CSV format without a header, in ascii format.
     results.save(filePath, csv_ascii);
 }
 
@@ -105,8 +105,24 @@ vec ThomasAlgorithm(int n, vec u, double a, double b, bool verbose) {
 }
 
 void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal, double tStep, int N_sum){
-    // N_sum: Number of terms to include in the sum of the analytical solution.
-    // The higher N_sum is, the better the approximation will be.
+    /* A funtion to calculate the analytical solution to the one dimensional problem.
+
+    Inputs:
+    n_x: integer, the number of x points.
+    x_start: double, the start of x.
+    x_end: double, the end of x.
+    tFinal: double, the final time.
+    tStep: double, dt or the time step.
+    N_sum: integer, Number of terms to include in the sum of the analytical solution.
+    The higher N_sum is, the better the approximation will be.
+
+    Outputs: Void
+
+    The function saves all relevant data to file.
+    */
+
+    // Set the number of nodes.
+    omp_set_num_threads(NUM_THREADS);
 
     double L = x_end-x_start;
     // The constant k pre-calculates pi/L:
@@ -138,6 +154,8 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
 
             // Calculate the sum for v(x,t) (as in u(x,t)=v(x,t)-f(x)):
             double sum_element;
+            int n;
+            # pragma omp parallel for default(shared) private (n) reduction(+:v_xt)
             for (int n=1; n<=N_sum; n++){
                 sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
                 v_xt += sum_element;
@@ -162,6 +180,21 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
 }
 
 void explicitScheme(int n, int tFinal, bool verbose ){
+    /* A function which runs the explicit scheme (forward euler) for the 
+    one dimensional case.
+
+    Inputs:
+    n: integer, the number of x points.
+    x_start: double, the start of x.
+    x_end: double, the end of x.
+    tFinal: double, the final time.
+    verbose: bool, if you want to print more to terminal.
+
+    Outputs: Void
+
+    The function saves all relevant data to file.
+    */
+
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
@@ -263,6 +296,22 @@ void explicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
 }
 
 void implicitScheme(int n, int tFinal, double tStep, bool verbose){
+    /* A function which runs the implicit scheme (backward euler) for the 
+    one dimensional case.
+
+    Inputs:
+    n: integer, the number of x points.
+    x_start: double, the start of x.
+    x_end: double, the end of x.
+    tFinal: double, the final time.
+    tStep: double, dt the time step.
+    verbose: bool, if you want to print more to terminal.
+    
+    Outputs: Void
+
+    The function saves all relevant data to file.
+    */
+
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
@@ -402,6 +451,23 @@ void implicitScheme_v2(int n, double x_start, double x_end, double tFinal, doubl
 }
 
 void crankNicolsonScheme(int n, int tFinal, double tStep, bool verbose){
+    /* A function which runs the Crank Nicolson for the 
+    one dimensional case, which is a mix between forward and 
+    backward schemes.
+
+    Inputs:
+    n: integer, the number of x points.
+    x_start: double, the start of x.
+    x_end: double, the end of x.
+    tFinal: double, the final time.
+    tStep: double, dt the time step.
+    verbose: bool, if you want to print more to terminal.
+    
+    Outputs: Void
+
+    The function saves all relevant data to file.
+    */
+
     // First we set initialise the new and old vectors
     // Set boundary conditions.
     // We have n+1 grid points so from 0 to L. starting at x_0 to x_n, which are both boundaries.
@@ -529,19 +595,34 @@ void crankNicolsonScheme_v2(int n, double x_start, double x_end, double tFinal, 
 }
 
 void diffusion1D(){
+    /* Runs all one dimensional schemes including the analytical solver.
 
-    double tFinal; int Npoints; double dt; string verboseOrNot; bool verbose;
+    Inputs: None
+
+    Outputs: Void
+
+    All necessary data is written to file.
+
+    */
+
+    double tFinal; int Npoints; double dt; string verboseOrNot; bool verbose; double x_start; double x_end;
     
+    cout << "Please enter x_start (double)..." << endl;
+    cin >> x_start;
+
+    cout << "Please enter x_end (double)..." << endl;
+    cin >> x_end;
+
     cout << "Please enter Npoints (int)..." << endl;
     cin >> Npoints;
 
-    double dx = 1.0/(Npoints-1);
+    double dx = (x_end-x_start)/(Npoints-1);
     cout << "dx is: " << dx << endl;
 
     cout << "Please enter tFinal (can be double)..." << endl;
     cin >> tFinal;
     
-    cout << "Please enter dt for Implicit and CN (double)..." << endl;
+    cout << "Please enter dt for Implicit and Crank Nicolson (double)..." << endl;
     cin >> dt;
 
     cout << "Do you want verbose? (Y/N)?";
@@ -554,13 +635,15 @@ void diffusion1D(){
         verbose = false;
     }
 
+    // Set dt to the same as explicit
+    dt = (dx*dx)/2;
     // The number which the analytic solution should go to.
     int N_sum = 10000;
 
     explicitScheme(Npoints, tFinal, verbose);
     implicitScheme(Npoints, tFinal, dt, verbose);
     crankNicolsonScheme(Npoints, tFinal, dt, verbose);
-    analytical_solution_1D(Npoints, 1.0, 0.0, tFinal, dt, N_sum);
+    analytical_solution_1D(Npoints, x_start, x_end, tFinal, dt, N_sum);
 }
 
 
@@ -568,6 +651,16 @@ void diffusion1D(){
 // These functions below do not run with physical constants.
 
 void diffusion2D(){
+    /* Runs the two dimensional (dimensionless) problem including the analytical solver.
+
+    Inputs: None
+
+    Outputs: Void
+
+    All necessary data is written to file.
+
+    */
+
     omp_set_num_threads(NUM_THREADS);
     cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
@@ -657,15 +750,20 @@ void diffusion2D(){
 
 // Function for setting up the iterative Jacobi solver
 int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol){
-    /* Return the iteration at which the Jacobi solver completes.
-    Inputs:
-    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
-    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
-    previous step.
-    */
+    /* Function for the iterative Jacobi solver. The function returns
+    the iteration it converges at, or the maxiteration without convergence.
 
-    // Check if A is all zeros 
-    //cout << A_prev.is_zero() << endl;
+    Inputs:
+    N: int, the number of x and y points. 
+    dx: double, the x and y step.
+    dt: double, the time step.
+    A: arma::mat, the solution. At t=0, A = 0.0. After that it is changed each loop.
+    A_prev: arma::mat, the solution from the previous time step. At t=0 A_prev = 0.0. 
+    abstol: double, the stopping tolerance for the Jacobi solver.
+
+    Outputs:
+    k: int, the iteration at which the solver reaches convergence or if not it returns Maxiteration. 
+    */
 
     int MaxIterations = 100000;
     double alpha = dt/(dx*dx);
@@ -730,6 +828,17 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
 // Functions to run before the enrichment. 
 
 void diffusion2DBeforeEnrichment(){
+    /* Runs the two dimensional diffusion solver for the lithosphere problem.
+    It does not take into account any heat production from enrichment of 
+    radioactive elements.  
+
+    Inputs: None
+
+    Outputs: Void
+
+    All necessary data is written to file.
+
+    */
     omp_set_num_threads(NUM_THREADS);
     cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
@@ -810,15 +919,21 @@ void diffusion2DBeforeEnrichment(){
     results.save(filePath, raw_ascii);
 }
 
-// Function for setting up the iterative Jacobi solver
 int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double eta){
-    /* Return the iteration at which the Jacobi solver completes.
+    /* Function for the iterative Jacobi solver. The function returns
+    the iteration it converges at, or the maxiteration without convergence.
 
     Inputs:
-    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
-    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
-    previous step.
+    N: int, the number of x and y points. 
+    dx: double, the x and y step.
+    dt: double, the time step.
+    A: arma::mat, the solution. At t=0, A = 0.0. After that it is changed each loop.
+    A_prev: arma::mat, the solution from the previous time step. At t=0 A_prev = 0.0. 
+    abstol: double, the stopping tolerance for the Jacobi solver.
+    eta: double, constants from the diffusion equation merged into one. 
 
+    Outputs:
+    k: int, the iteration at which the solver reaches convergence or if not it returns Maxiteration. 
     */
 
     int MaxIterations = 100000;
@@ -882,6 +997,18 @@ int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_pre
 // These are functions for after radioactive enrichment.
 
 void diffusion2DAfterEnrichment(){
+    /* Runs the two dimensional diffusion solver for the lithosphere problem.
+    This function takes into account the heat production from enrichment of U,
+    Th and K from 1.0 Gy ago. 
+
+    Inputs: None
+
+    Outputs: Void
+
+    All necessary data is written to file.
+
+    */
+
     omp_set_num_threads(NUM_THREADS);
     cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
@@ -972,19 +1099,24 @@ void diffusion2DAfterEnrichment(){
     results.save(filePath, raw_ascii);
 }
 
-// Function for setting up the iterative Jacobi solver
 int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
-    /* Return the iteration at which the Jacobi solver completes.
+ /* Function for the iterative Jacobi solver. The function returns
+    the iteration it converges at, or the maxiteration without convergence.
 
     Inputs:
-    A, matrix. A at t=0 is A(Npoints,Npoints, fill::zeros). After that it is changed each loop.
-    A_prev, matrix. A_prev at t=0 is a initial state and at t>0 it is equal to A from the 
-    previous step.
+    N: int, the number of x and y points. 
+    dx: double, the x and y step.
+    dt: double, the time step.
+    A: arma::mat, the solution. At t=0, A = 0.0. After that it is changed each loop.
+    A_prev: arma::mat, the solution from the previous time step. At t=0 A_prev = 0.0. 
+    abstol: double, the stopping tolerance for the Jacobi solver.
+    Qt: double, the heat production at time t.
+    k: double, the thermal conductivity.
+    beta: double, one over the specific heat capacity and density. 1/(c_p * rho). 
 
+    Outputs:
+    k: int, the iteration at which the solver reaches convergence or if not it returns Maxiteration. 
     */
-
-    // Check if A is all zeros 
-    //cout << A_prev.is_zero() << endl;
 
     int MaxIterations = 100000;
     double alpha = dt/(dx*dx);
@@ -1098,7 +1230,11 @@ double Qdepth(int i, double dx){
     // Else return Qdepth if greater than 40 km.
     return 0.05 * 3.15e19;
 }
+
 void run_5c(){
+    /* Runs the one dimensional schemes without inputs from the terminal.
+    */
+
     double tFinal = 1; // Final time
     int Nx = 10; // Number of x points between 0 and L=1. In 5c: 10 or 100)
     double x_start = 0; double x_end = 1;
