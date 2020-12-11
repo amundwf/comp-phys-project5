@@ -838,7 +838,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
 
 // Functions to run before the enrichment. 
 
-void diffusion2DBeforeEnrichment(){
+void lithosphere(bool enrichment){
     /* Runs the two dimensional diffusion solver for the lithosphere problem.
     It does not take into account any heat production from enrichment of 
     radioactive elements.  
@@ -850,13 +850,11 @@ void diffusion2DBeforeEnrichment(){
     All necessary data is written to file.
 
     */
-    omp_set_num_threads(NUM_THREADS);
-    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
 
     double tFinal; double dt; double maxDepth; double dx;
 
     // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
-    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
+    cout << "Starting from 1 Giga year ago, please enter the final time in Giga years (double)" << endl;
     cin >> tFinal;
 
     // What about the time step..
@@ -865,7 +863,7 @@ void diffusion2DBeforeEnrichment(){
     cout << "You have chosen dt= " << dt*1e9 << " years" << endl;
 
     // How deep in km
-    cout << "Please enter max depth in km. Note that there are changes to heat production between 0 and 120 km" << endl;
+    cout << "Please enter max depth in km" << endl;
     cin >> maxDepth;
 
     // What about the distance step..
@@ -876,6 +874,12 @@ void diffusion2DBeforeEnrichment(){
     int Npoints = int(maxDepth / dx);
 
     cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
+
+    omp_set_num_threads(NUM_THREADS);
+    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
+
+    // Calc alpha.
+    double alpha = dt/(dx*dx);
 
     // density of lithosphere 3.510 Kg/m3.
     double rho = 3.510;
@@ -890,9 +894,10 @@ void diffusion2DBeforeEnrichment(){
     k = k * 3.15e19;
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
+    cout << "The constant beta is: " << beta << endl;
 
-    //double eta = k*beta*dt/(dx*dx);
-    //cout << "The constant eta is: " << eta << endl;
+    double gamma = k*beta*alpha;
+    cout << "The constant gamma is: " << gamma << endl;
 
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
@@ -915,7 +920,7 @@ void diffusion2DBeforeEnrichment(){
         double time = dt*t; // time should be in Gy. 
         A_prev = A;
 
-        int itcount = JacobiSolverBeforeEnrichment(Npoints,dx,dt,A,A_prev,tolerance,k,beta);
+        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,t,alpha,A,A_prev,tolerance,beta,gamma,enrichment);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
@@ -930,7 +935,7 @@ void diffusion2DBeforeEnrichment(){
     results.save(filePath, raw_ascii);
 }
 
-int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double k, double beta){
+int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, mat &A, mat &A_prev, double abstol, double beta, double gamma, bool enrichment ){
     /* Function for the iterative Jacobi solver. The function returns
     the iteration it converges at, or the maxiteration without convergence.
 
@@ -948,8 +953,7 @@ int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_pre
     */
 
     int MaxIterations = 100000;
-    double alpha = dt/(dx*dx);
-
+    
     // Aold is the inital guess which starts as 1.0
     // everywhere. As the iterations go on it is changed.
     mat Aold = zeros<mat>(N, N); 
@@ -968,6 +972,9 @@ int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_pre
         Aold(i, N-1) = 0.0; // Right side.
     }
 
+    // Calculate heat production in mantle.
+    double Qt = Qtime(t*dt);
+
     // Start the iterative solver
     for(int k=0; k < MaxIterations; k++){
         double sum = 0.0;
@@ -978,207 +985,19 @@ int JacobiSolverBeforeEnrichment(int N, double dx, double dt, mat &A, mat &A_pre
         {
             # pragma omp for
             for(int i=1; i < N-1; i++){
-                for(int j=1; j < N-1; j++){
-                    
-                // This part could be wrong and only in intial conditions. 
+                // Calculate the heat production as a function of depth.
                 double Qi = Qdepth(i, dx);
 
-                A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qi + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                            Aold(i-1,j) + Aold(i,j-1) ) ) );
-                    
-                }
-            }
-
-            // Sum the error at each location.
-            // And make Aold = A for the next iteration.
-            for(int i = 1; i < N-1;i++){
-                for(int j = 1; j < N-1;j++){
-                    sum += fabs( Aold(i,j) - A(i,j) );
-                    Aold(i,j) = A(i,j);
-                }
-            }
-        } // End parallel task.
-
-        // Does the error reach the stopping criteria
-        if( (sum /= (N*N)) < abstol){
-            return k;
-        }
-    }
-    cerr << "Jacobi: Maximum Number of Interations Reached Without Convergence\n";
-    return MaxIterations;
-}
-
-// These are functions for after radioactive enrichment.
-
-void diffusion2DAfterEnrichment(){
-    /* Runs the two dimensional diffusion solver for the lithosphere problem.
-    This function takes into account the heat production from enrichment of U,
-    Th and K from 1.0 Gy ago. 
-
-    Inputs: None
-
-    Outputs: Void
-
-    All necessary data is written to file.
-
-    */
-
-    omp_set_num_threads(NUM_THREADS);
-    cout << "The number of processors available = " << omp_get_num_procs ( ) << endl;
-
-    double tFinal; double dt; double maxDepth; double dx;
-
-    // Time is in Gy (since 1Gy ago) so how long do you want to run in Gy
-    cout << "Starting from 1 Giga year ago, how long do you want to run for in Gy (double)" << endl;
-    cin >> tFinal;
-
-    // What about the time step..
-    cout << "What time step in Gy (double)" << endl;
-    cin >> dt;
-    cout << "You have chosen dt= " << dt*1e9 << "years" << endl;
-
-    // How deep in km
-    cout << "Please enter max depth in km. Note that there are changes to Q between 0 and 120 km" << endl;
-    cin >> maxDepth;
-
-    // What about the distance step..
-    cout << "Please enter the distance step (dx) in km" << endl;
-    cin >> dx;
-
-    int Tpoints = int(tFinal / dt);
-    int Npoints = int(maxDepth / dx);
-
-    cout << "You have chosen Tpoints= " << Tpoints << " and Npoints= " << Npoints << endl; 
-
-    // density of lithosphere 3.510 Kg/m3.
-    double rho = 3.510;
-    // Thermal conductivity k, 2.5 W/m/K.
-    double k = 2.5;
-    // Specific heat capacity cp, 1000 J/Kg/K.
-    double cp = 1000;
-
-    // Now these constant will be changed to be in Joules, 
-    // km, Giga years (Gy), Kelvin and kilograms (Kg).
-    rho = rho * 1e9; // Kg/km3. 
-    k = k * 3.15e19;
-    // cp is unchanged, units are fine.
-    double beta = 1/(rho*cp);
-
-    double tolerance = 1.0e-14;
-    mat A = zeros<mat>(Npoints,Npoints);
-    mat A_prev = zeros<mat>(Npoints,Npoints);
-    cube results = cube(Npoints, Npoints, Tpoints);
-
-    // Boundary Conditions in Kelvin. 
-    for(int i=0; i < Npoints; i++){
-        A(0,i) = 281.15; // Top of matrix
-        A(Npoints-1, i) = 1573.15; // Bottom of matrix.
-        A(i,0) = 0.0; // Left side.
-        A(i, Npoints-1) = 0.0; // Right side.
-    }
-    /*
-    // Add initial heat production conditions.
-    for(int i = 1; i < Npoints-1; i++){
-        double Q = Qdepth(i, dx);
-        double Qoverk = Q/k;
-        for(int j = 1; j < Npoints-1; j++){
-            A(i,j) = - Qoverk;
-        }
-    }
-    */
-
-    // Store initial conditions. 
-    results(span::all, span::all, span(0)) = A;
-
-    // Loop over time.
-    for( int t = 1; t < Tpoints; t++){
-        double time = dt*t; // time should be in Gy. 
-        A_prev = A;
-        
-        // Calculate Q, the heat production at time t.
-        // Qtotal = Q(t) + Q(j). The depth part is added in JacobiSolver.
-        double Qt = Qtime(time);
-
-        int itcount = JacobiSolverAfterEnrichment(Npoints,dx,dt,A,A_prev,tolerance,Qt,k,beta);
-
-        // Store A in cube results.
-        results( span::all, span::all, span(t)) = A;
-
-        cout << "Jacobi method with error in " << itcount << " iterations" << endl;
-    }
-    // End time loop.
-    ofstream ofile;
-    string directory = "../results/2D_diffusion_after_enrichment/";
-    string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
-    string filePath = directory + filename;
-    results.save(filePath, raw_ascii);
-}
-
-int JacobiSolverAfterEnrichment(int N, double dx, double dt, mat &A, mat &A_prev, double abstol, double Qt, double k, double beta){
- /* Function for the iterative Jacobi solver. The function returns
-    the iteration it converges at, or the maxiteration without convergence.
-
-    Inputs:
-    N: int, the number of x and y points. 
-    dx: double, the x and y step.
-    dt: double, the time step.
-    A: arma::mat, the solution. At t=0, A = 0.0. After that it is changed each loop.
-    A_prev: arma::mat, the solution from the previous time step. At t=0 A_prev = 0.0. 
-    abstol: double, the stopping tolerance for the Jacobi solver.
-    Qt: double, the heat production at time t.
-    k: double, the thermal conductivity.
-    beta: double, one over the specific heat capacity and density. 1/(c_p * rho). 
-
-    Outputs:
-    k: int, the iteration at which the solver reaches convergence or if not it returns Maxiteration. 
-    */
-
-    int MaxIterations = 100000;
-    double alpha = dt/(dx*dx);
-
-    // Aold is the inital guess which starts as 1.0
-    // everywhere. As the iterations go on it is changed.
-    mat Aold = zeros<mat>(N, N); 
-    for(int i=1;  i < N-1; i++){
-        for(int j=1; j < N-1; j++){
-            Aold(i,j) = 1.0;
-        }
-    }
-
-    // Boundary Conditions set each time step to make sure.
-    // Boundary conditions in kelvin. 8 degree celcius at top to 1300 degrees celcius at bottom.
-    for(int i=0; i < N; i++){
-        Aold(0,i) = 281.15; // Top of matrix
-        Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
-        Aold(i,0) = 0.0; // Left side.
-        Aold(i, N-1) = 0.0; // Right side.
-    }
-
-    // Start the iterative solver
-    for(int k=0; k < MaxIterations; k++){
-        double sum = 0.0;
-        // Declare i and j from omp.
-        int i, j;
-        // Start parallel task.
-        # pragma omp parallel default(shared) private(i,j) reduction(+:sum)
-        {
-            # pragma omp for
-            for(int i=1; i < N-1; i++){
                 for(int j=1; j < N-1; j++){
-
-                    // This part could be wrong and only in intial conditions. 
-                    double Qi = Qdepth(i, dx);
-
-                    // Add Q(t) only to the mantle , which is deeper than 40 km.
-                    if ( i*dx > 40){
+                    // If we are in the mantle (below 40 km) and enrichment is true, add heat production from enichment. 
+                    if ( i*dx > 40 && enrichment){
                         double Qtotal = Qi + Qt;
-                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qtotal + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                                    Aold(i-1,j) + Aold(i,j-1) ) ) );
-                    }
-                    else{
-                        A(i,j) = (1/(1 + 4*alpha*beta*k))*( A_prev(i,j) + beta*(dt*Qi + k*alpha*( Aold(i+1,j) + Aold(i,j+1) + 
-                                    Aold(i-1,j) + Aold(i,j-1) ) ) );
-                    }
+                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + beta*dt*Qtotal + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
+                                Aold(i-1,j) + Aold(i,j-1)) );
+                    }else{
+                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + beta*dt*Qi + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
+                                Aold(i-1,j) + Aold(i,j-1)) );
+                    }  
                 }
             }
 
@@ -1225,7 +1044,7 @@ double Qtime(double time){
 }
 
 double Qdepth(int i, double dx){
-    // Return the heat production as a function of depth, Qj or Qdepth. 
+    // Return the heat production as a function of depth, Qi or Qdepth. 
 
     // depth in km.
     double depth = dx*i;

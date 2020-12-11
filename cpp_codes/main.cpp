@@ -10,7 +10,7 @@ int main(){
     run_5c();
 
     */
-    int dim; string lithosphereOrNot;
+    int dim; string lithosphereOrNot; bool enrichment; string EnrichmentOrNot;
     
     cout << "Please enter if you want to run in 1D or 2D diffusion equation (int)" << endl;
     cin >> dim;
@@ -25,16 +25,17 @@ int main(){
         cin >> lithosphereOrNot;
 
         if (lithosphereOrNot == "y"){
-            string BeforeEnrichmentOrNot;
-            cout << "Do you want to run before enrichment? [Y/N]" << endl;
-            cin >> BeforeEnrichmentOrNot;
+            
+            cout << "Do you want to run after the mantle has been enriched? [Y/N]" << endl;
+            cin >> EnrichmentOrNot;
 
-            if (BeforeEnrichmentOrNot == "y"){
-                diffusion2DBeforeEnrichment();
+            if (EnrichmentOrNot == "y"){
+                enrichment = true;
             }
             else{
-                diffusion2DAfterEnrichment();
+                enrichment = false;
             }
+            lithosphere(enrichment);
         }
         else{
             diffusion2D();
