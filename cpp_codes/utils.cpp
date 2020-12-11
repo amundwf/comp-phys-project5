@@ -1007,17 +1007,21 @@ int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha,
                 // Calculate the heat production as a function of depth.
                 double Qi = Qdepth(i, dx);
 
-                for(int j=1; j < N-1; j++){
-                    // If we are in the mantle (below 40 km) and enrichment is true, add heat production from enichment. 
-                    if ( i*dx > 40 && enrichment ){
+                // If we are in the mantle (below 40 km) and enrichment is true, add heat production from enichment. 
+                if ( i*dx > 40 && enrichment ){
+                    for(int j=1; j < N-1; j++){
+                        // Add the time dependant heat production. 
                         double Qtotal = Qi + Qt;                  
                         A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + eta*dt*Qtotal + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
                                 Aold(i-1,j) + Aold(i,j-1)) );
-                    }else{
-                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + beta*dt*Qi + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
-                                Aold(i-1,j) + Aold(i,j-1)) );
-                    }  
-                }
+                    }
+                } else {
+                    for(int j=1; j < N-1; j++){
+                    A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + eta*dt*Qi + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
+                            Aold(i-1,j) + Aold(i,j-1)) );
+                    }
+                }  
+                
             }
 
             // Sum the error at each location.
