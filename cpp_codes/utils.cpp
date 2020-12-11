@@ -157,7 +157,7 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
             // Calculate the sum for v(x,t) (as in u(x,t)=v(x,t)-f(x)):
             double sum_element;
             int n;
-            # pragma omp parallel for default(shared) private (n) reduction(+:v_xt)
+            # pragma omp parallel for default(shared) private (n, sum_element) reduction(+:v_xt)
             for (int n=1; n<=N_sum; n++){
                 sum_element = (1/n)*pow(-1,n)*sin(k*n*x)*exp(-k2*(n*n)*t);
                 v_xt += sum_element;
@@ -890,26 +890,38 @@ void lithosphere(bool enrichment){
 
     // Now these constant will be changed to be in Joules, 
     // km, Giga years (Gy), Kelvin and kilograms (Kg).
+    /*
     rho = rho * 1e9; // Kg/km3. 
     k = k * 3.15e19;
+
     // cp is unchanged, units are fine.
     double beta = 1/(rho*cp);
     cout << "The constant beta is: " << beta << endl;
 
     double gamma = k*beta*alpha;
     cout << "The constant gamma is: " << gamma << endl;
+    */
+    
+    cout << "alpha is: " << alpha << endl;
+    double eta = 3.15e7/rho;
+    cout << "The constant eta is: " << eta << endl;
+    double gamma = k*eta*alpha;
+    cout << "The constant gamma is: " << gamma << endl;
+
 
     double tolerance = 1.0e-14;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);
 
+    A += 281.15;
+
     // Boundary Conditions in Kelvin. 
     for(int i=0; i < Npoints; i++){
         A(0,i) = 281.15; // Top of matrix
         A(Npoints-1, i) = 1573.15; // Bottom of matrix.
-        A(i,0) = 0.0; // Left side.
-        A(i, Npoints-1) = 0.0; // Right side.
+        A(i,0) = 281.15; // Left side.
+        A(i, Npoints-1) = 281.15; // Right side.
     }
 
     // Store initial conditions. 
@@ -920,7 +932,7 @@ void lithosphere(bool enrichment){
         double time = dt*t; // time should be in Gy. 
         A_prev = A;
 
-        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,t,alpha,A,A_prev,tolerance,beta,gamma,enrichment);
+        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,t,alpha,A,A_prev,tolerance,gamma,eta,enrichment);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
@@ -929,13 +941,19 @@ void lithosphere(bool enrichment){
     }
     // End time loop.
     ofstream ofile;
-    string directory = "../results/2D_diffusion_before_enrichment/";
+    string directory;
+    if (enrichment == true){
+        directory = "../results/2D_diffusion_after_enrichment/";
+    } else{
+        directory = "../results/2D_diffusion_before_enrichment/";
+    }
+    
     string filename =  "Tpoints=" + to_string(Tpoints)+ "_Npoints=" + to_string(Npoints) + "Lithosphere.txt";
     string filePath = directory + filename;
     results.save(filePath, raw_ascii);
 }
 
-int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, mat &A, mat &A_prev, double abstol, double beta, double gamma, bool enrichment ){
+int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, mat &A, mat &A_prev, double abstol, double gamma, double eta, bool enrichment ){
     /* Function for the iterative Jacobi solver. The function returns
     the iteration it converges at, or the maxiteration without convergence.
 
@@ -962,15 +980,16 @@ int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha,
             Aold(i,j) = 1.0;
         }
     }
-
+    
     // Boundary Conditions set each time step to make sure.
     // Boundary conditions in kelvin. 8 degree celcius at top to 1300 degrees celcius at bottom.
     for(int i=0; i < N; i++){
         Aold(0,i) = 281.15; // Top of matrix
         Aold(N-1, i) = 1573.15 ; // Bottom of matrix.
-        Aold(i,0) = 0.0; // Left side.
-        Aold(i, N-1) = 0.0; // Right side.
+        Aold(i,0) = 281.15; // Left side.
+        Aold(i, N-1) = 281.15; // Right side.
     }
+    
 
     // Calculate heat production in mantle.
     double Qt = Qtime(t*dt);
@@ -988,17 +1007,21 @@ int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha,
                 // Calculate the heat production as a function of depth.
                 double Qi = Qdepth(i, dx);
 
-                for(int j=1; j < N-1; j++){
-                    // If we are in the mantle (below 40 km) and enrichment is true, add heat production from enichment. 
-                    if ( i*dx > 40 && enrichment){
-                        double Qtotal = Qi + Qt;
-                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + beta*dt*Qtotal + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
+                // If we are in the mantle (below 40 km) and enrichment is true, add heat production from enichment. 
+                if ( i*dx > 40 && enrichment ){
+                    for(int j=1; j < N-1; j++){
+                        // Add the time dependant heat production. 
+                        double Qtotal = Qi + Qt;                  
+                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + eta*dt*Qtotal + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
                                 Aold(i-1,j) + Aold(i,j-1)) );
-                    }else{
-                        A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + beta*dt*Qi + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
-                                Aold(i-1,j) + Aold(i,j-1)) );
-                    }  
-                }
+                    }
+                } else {
+                    for(int j=1; j < N-1; j++){
+                    A(i,j) = (1/(1 + 4*gamma))*( A_prev(i,j) + eta*dt*Qi + gamma*(Aold(i+1,j) + Aold(i,j+1) + 
+                            Aold(i-1,j) + Aold(i,j-1)) );
+                    }
+                }  
+                
             }
 
             // Sum the error at each location.
@@ -1038,7 +1061,7 @@ double Qtime(double time){
     // Multiply this fraction (sum) by the heat production at t=0. 
     // At t=0 is was 0.5 micro Watts / m^3, now it is in
     // Joules / Gy / km^3
-    double Qt = 0.5*3.15e19*sum;
+    double Qt = 0.5*sum;
 
     return Qt;
 }
@@ -1054,15 +1077,15 @@ double Qdepth(int i, double dx){
 
     // If less than or equal to 20 km.
     if (depth <= 20){
-        return 1.40 * 3.15e19;
+        return 1.40;
     }
 
     // If between 20 and 40 km.
     if (depth > 20 && depth <= 40 ){
-        return 0.35 * 3.15e19;
+        return 0.35;
     }
     // Else return Qdepth if greater than 40 km.
-    return 0.05 * 3.15e19;
+    return 0.05;
 }
 
 void run_5c(){
