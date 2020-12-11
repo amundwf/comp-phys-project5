@@ -40,19 +40,15 @@ int JacobiSolver(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, d
 
 // Functions for after radioactive enrichment.
 
-void diffusion2DAfterEnrichment();
-
-int JacobiSolverAfterEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double Qt, double k, double beta);
-
 double Qtime(double time);
 
 double Qdepth(int j, double dt);
 
 // Temporary functions for before enrichment.
 
-void diffusion2DBeforeEnrichment();
+void lithosphere(bool enrichment);
 
-int JacobiSolverBeforeEnrichment(int N, double dx, double dt, arma::mat &A, arma::mat &A_prev, double abstol, double k, double beta);
+int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, arma::mat &A, arma::mat &A_prev, double abstol, double beta, double gamma, bool enrichment);
 
 // one dimensional schemes without inputs from terminal.
 
