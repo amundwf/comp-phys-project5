@@ -48,7 +48,7 @@ double Qdepth(int j, double dt);
 
 void lithosphere(bool enrichment);
 
-int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, arma::mat &A, arma::mat &A_prev, double abstol, double beta, double gamma, bool enrichment);
+int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, arma::mat &A, arma::mat &A_prev, double abstol, double beta, double gamma, double eta, bool enrichment);
 
 // one dimensional schemes without inputs from terminal.
 
