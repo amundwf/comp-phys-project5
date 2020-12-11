@@ -901,7 +901,7 @@ void lithosphere(bool enrichment){
     double gamma = k*beta*alpha;
     cout << "The constant gamma is: " << gamma << endl;
     */
-    double beta = 0.0;
+    
     cout << "alpha is: " << alpha << endl;
     double eta = 3.15e7/rho;
     cout << "The constant eta is: " << eta << endl;
@@ -932,7 +932,7 @@ void lithosphere(bool enrichment){
         double time = dt*t; // time should be in Gy. 
         A_prev = A;
 
-        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,t,alpha,A,A_prev,tolerance,beta,gamma,eta,enrichment);
+        int itcount = JacobiSolverLithosphere(Npoints,dx,dt,t,alpha,A,A_prev,tolerance,gamma,eta,enrichment);
 
         // Store A in cube results.
         results( span::all, span::all, span(t)) = A;
@@ -953,7 +953,7 @@ void lithosphere(bool enrichment){
     results.save(filePath, raw_ascii);
 }
 
-int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, mat &A, mat &A_prev, double abstol, double beta, double gamma, double eta, bool enrichment ){
+int JacobiSolverLithosphere(int N, double dx, double dt, double t, double alpha, mat &A, mat &A_prev, double abstol, double gamma, double eta, bool enrichment ){
     /* Function for the iterative Jacobi solver. The function returns
     the iteration it converges at, or the maxiteration without convergence.
 
