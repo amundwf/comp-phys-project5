@@ -122,24 +122,24 @@ void analytical_solution_1D(int n_x, double x_start, double x_end, double tFinal
     }
     // Make the list of t values.
     int tPoints = ceil(tFinal/tStep);
-    vec tList = zeros(tPoints);
-    for (int i=0; i<=tPoints-1; i++){
+    vec tList = zeros(tPoints+1);
+    for (int i=1; i<=tPoints; i++){
         tList(i) = i*tStep;
     }
     // Now calculate the values of u(x,t) and put them in a 2D array:
     mat v_xt_array = zeros(n_x, tPoints+1);
-    mat u_xt_array = zeros(n_x, tPoints);
+    mat u_xt_array = zeros(n_x, tPoints+1);
 
     for (int i=0; i<=n_x-1; i++){ // For all x
         double x = xList(i);
-        for (int j=0; j<=tPoints-1; j++){ // For all t
+        for (int j=0; j<=tPoints; j++){ // For all t
             double t = tList(j);
             double v_xt = 0;
 
             // Calculate the sum for v(x,t) (as in u(x,t)=v(x,t)-f(x)):
             double sum_element;
             for (int n=1; n<=N_sum; n++){
-                sum_element = pow(-1,n+1)*sin(k*n*x)*exp(-k2*(n*n)*t);
+                sum_element = pow(-1,n)*(sin(k*n*x)/n)*exp(-k2*(n*n)*t);
                 v_xt += sum_element;
                 // The term '+ x' is from f(x)=-x/L with L=1, as in u(x,t)=v(x,t)-f(x).
             }
@@ -922,7 +922,7 @@ int JacobiSolver(int N, double dx, double dt, mat &A, mat &A_prev, double abstol
 }
 
 void run_5c(){
-    double tFinal = 1; // Final time
+    double tFinal = 0.3; // Final time
     int Nx = 10; // Number of x points between 0 and L=1. In 5c: 10 or 100)
     double x_start = 0; double x_end = 1;
     double dx = (x_end-x_start)/double(Nx-1);
