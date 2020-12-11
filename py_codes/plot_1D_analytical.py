@@ -40,7 +40,7 @@ plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
 t_index = 10 # Which timestep should be plotted?
 
 if plotCodeWord == 'colormesh':
-    plt.pcolor(X, T, u_xt_array)#, cmap=cm)
+    plt.pcolormesh(X, T, u_xt_array)#, cmap=cm)
     #plt.pcolormesh(u_xt_array)
     #plot1, = plt.plot(xList, v_t_list)
     #plt.legend(plot1, )

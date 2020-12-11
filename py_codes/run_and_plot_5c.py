@@ -42,6 +42,7 @@ u_implicit_array = np.array(df_implicit.values)
 df_crankNicolson = pd.read_csv(resultsDirectory + "crankNicolson_1D.csv", sep=',',header=None)
 u_crankNicolson_array = np.array(df_crankNicolson.values)
 
+#print(u_xt_array)
 
 X, T = np.meshgrid(xList, tList)
 #plt.pcolormesh(dataFrame)
@@ -54,16 +55,48 @@ t_index = 10 # Which timestep should be plotted?
 time = tList[t_index]
 
 if plotCodeWord == 'colormesh':
-    #fig, ax = plt.subplots(2,2)#, figsize=(9,9), dpi = 80)
-    #ax = ax.flatten()
+    # Get a figure with 2x2 subplots:
+    fig, ax = plt.subplots(2,2)#, figsize=(9,9), dpi = 80)
 
-    plt.pcolor(X, T, u_xt_array)#, cmap=cm)
-    #plt.pcolormesh(u_xt_array)
-    #plot1, = plt.plot(xList, v_t_list)
-    #plt.legend(plot1, )
-    plt.legend()
-    plt.grid()
-    plt.ylabel(r'$t$')
+    # Plot the analytical solution (top left subplot):
+    # Get extended arrays for plotting using pcolormesh (pcolormesh is bugged; it
+    # doesn't show the right and bottom sides of the plotted array):
+    u_ext, X_ext, T_ext = ut.get_extended_array_and_meshgrid(u_xt_array, xList, tList)
+    pcm = ax[0,0].pcolormesh(X_ext,T_ext,u_ext)
+    ax[0,0].set_xlabel(r"$x$")
+    ax[0,0].set_ylabel(r"$t$")
+    ax[0,0].set_yscale("linear")
+    ax[0,0].set_title("Analytical")
+    fig.colorbar(pcm, ax=ax[0,0])
+    #ax[0,0].invert_yaxis()
+    
+    # Plot the results from the explicit scheme:
+    u_ext, X_ext, T_ext = ut.get_extended_array_and_meshgrid(u_explicit_array, xList, tList)
+    pcm = ax[0,1].pcolormesh(X_ext,T_ext,u_ext)
+    ax[0,1].set_xlabel(r"$x$")
+    ax[0,1].set_ylabel(r"$t$")
+    ax[0,1].set_yscale("linear")
+    ax[0,1].set_title("Explicit scheme")
+    fig.colorbar(pcm, ax=ax[0,1])
+
+    # Plot the results from the implicit scheme:
+    u_ext, X_ext, T_ext = ut.get_extended_array_and_meshgrid(u_implicit_array, xList, tList)
+    pcm = ax[1,0].pcolormesh(X_ext,T_ext,u_ext)
+    ax[1,0].set_xlabel(r"$x$")
+    ax[1,0].set_ylabel(r"$t$")
+    ax[1,0].set_yscale("linear")
+    ax[1,0].set_title("Implicit scheme")
+    fig.colorbar(pcm, ax=ax[1,0])
+
+    # Plot the results from the Crank-Nicolson scheme:
+    u_ext, X_ext, T_ext = ut.get_extended_array_and_meshgrid(u_crankNicolson_array, xList, tList)
+    pcm = ax[1,1].pcolormesh(X_ext,T_ext,u_ext)
+    ax[1,1].set_xlabel(r"$x$")
+    ax[1,1].set_ylabel(r"$t$")
+    ax[1,1].set_yscale("linear")
+    ax[1,1].set_title("Crank-Nicolson scheme")
+    fig.colorbar(pcm, ax=ax[1,1])
+
 
 elif plotCodeWord == 'oneFrame':
     t = tList[t_index]
