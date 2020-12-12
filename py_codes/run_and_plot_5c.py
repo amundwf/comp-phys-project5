@@ -55,8 +55,8 @@ print(np.format_float_scientific(float(dt)))
 
 #plotCodeWord = 'colormesh'
 #plotCodeWord = 'oneFrame' # Plots u for one specified time.
-plotCodeWord = 'twoFrames' # Plots u for two specified times.
-#plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
+#plotCodeWord = 'twoFrames' # Plots u for two specified times.
+plotCodeWord = 'animate' # Animates the time steps using matplotlib.animate.
 t1 = 0.01
 t2 = 0.2
 t_index1 = ut.t_index_from_time(t1,dt)
@@ -209,45 +209,45 @@ elif plotCodeWord == 'animate':
 
     def init():
         ax.set_xlim(-0.01, 0.99)
-        #ax.set_ylim(-1, 40)
-        ax.set_ylim(-1, v_xt_array.max()*1.3)
+        ax.set_ylim(0, 1)
+        #ax.set_ylim(-1, v_xt_array.max()*1.3)
         return line,
 
     #print('tList:'); print(tList)
 
-    def update(frame): # frame = t_index basically
+    def update(frame): # frame = t_index, basically
         t = tList[frame]
-
         u_xt_list = u_xt_array[frame, :] # u(x,t) at the specific time t.
 
-        v_xt_list = v_xt_array[frame, :]
-        minus_f_x_list = (-ut.f(xList,1))[:,0]
-        u_xt_list_simple_sum = v_xt_list + minus_f_x_list
-
         xdata.append(t)
-        #ydata.append(u_xt_list_simple_sum[frame])
-        ydata.append(minus_f_x_list[frame])
+        ydata.append(u_xt_list)
+        #ydata.append(minus_f_x_list[frame])
         line.set_data(xdata, ydata)
         return line,
     
     def animate(i):
         x = xList
-
-        v_xt_list = v_xt_array[i, :]
-        minus_f_x_list = (-ut.f(xList,1))[:,0]
-        u_xt_list_simple_sum = v_xt_list + minus_f_x_list
-        y = u_xt_list_simple_sum
+        u_xt_list = u_xt_array[i, :]
+        y = u_xt_list
 
         line.set_data(x, y)
+        
         return line,
     #ani = FuncAnimation(fig, update, frames=np.array(range(len(tList))),
                         #init_func=init, blit=True)
-    ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=20, blit=True)
+    ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=30, blit=True)
     plt.ylabel(r'$u(x,t)$')
 
 #plt.xlabel(r'$x$')
 #plt.suptitle('Analytical 1D solution, diffusion equation')
 #plt.legend()
+
+
+
+if plotCodeWord=='animate': # Save the animation as a gif:
+    ani.save('../results/1D_diffusion/analytical_1D.gif',writer='imagemagick')
+
 plt.show()
+
 
  
