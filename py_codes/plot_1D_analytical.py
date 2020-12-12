@@ -106,7 +106,6 @@ elif plotCodeWord == 'animate':
                         #init_func=init, blit=True)
     ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=50, blit=True)
     plt.ylabel(r'$u(x,t)$')
-    
 
 plt.xlabel(r'$x$')
 plt.suptitle('Analytical 1D solution, diffusion equation')
