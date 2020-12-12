@@ -28,4 +28,9 @@ def get_extended_array_and_meshgrid(arr, xList, yList):
 
     return arr_ext, X_ext, Y_ext
 
-
+def t_index_from_time(time, dt):
+    # time = dt*t_index (time=0 = dt*0, time = dt= dt*1 and so on)
+    # --> t_index = time/dt.
+    time = float(time); dt = float(dt)
+    t_index = int(np.round(time/dt))
+    return t_index
