@@ -6,10 +6,10 @@ using namespace std;
 using namespace arma;
 
 int main(){
-    /*
-    run_5c();
 
-    */
+    run_5c();
+    
+    /*
     int dim; string lithosphereOrNot; bool enrichment; string EnrichmentOrNot;
     
     cout << "Please enter if you want to run in 1D or 2D diffusion equation (int)" << endl;
@@ -41,7 +41,7 @@ int main(){
             diffusion2D();
         }
     }
-    
+    */
 
     return 0;
 }
