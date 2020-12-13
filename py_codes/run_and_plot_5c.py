@@ -49,9 +49,9 @@ X, T = np.meshgrid(xList, tList)
 #plt.pcolor(xList, tList, u_xt_array)#, cmap=cm)
 
 Nx = len(xList) # The number of x points.
-print(Nx)
+print("Nx: " + str(Nx))
 dt = float(tList[1]-tList[0])
-print(np.format_float_scientific(float(dt)))
+print("dt: " + np.format_float_scientific(float(dt)))
 
 #plotCodeWord = 'colormesh'
 #plotCodeWord = 'oneFrame' # Plots u for one specified time.
@@ -208,8 +208,8 @@ elif plotCodeWord == 'animate':
     line, = plt.plot([], [], 'ro')
 
     def init():
-        ax.set_xlim(-0.01, 0.99)
-        ax.set_ylim(0, 1)
+        ax.set_xlim(-0.05, 1.05)
+        ax.set_ylim(-0.05, 1.05)
         #ax.set_ylim(-1, v_xt_array.max()*1.3)
         return line,
 
@@ -235,14 +235,15 @@ elif plotCodeWord == 'animate':
         return line,
     #ani = FuncAnimation(fig, update, frames=np.array(range(len(tList))),
                         #init_func=init, blit=True)
+    plt.grid()
     ani = FuncAnimation(fig, animate, init_func=init, frames=len(tList), interval=30, blit=True)
-    plt.ylabel(r'$u(x,t)$')
+    plt.ylabel(r"$u(x,t)$")
+    plt.xlabel(r"$x$")
+    plt.suptitle("1D analytical solution")
 
 #plt.xlabel(r'$x$')
 #plt.suptitle('Analytical 1D solution, diffusion equation')
 #plt.legend()
-
-
 
 if plotCodeWord=='animate': # Save the animation as a gif:
     ani.save('../results/1D_diffusion/analytical_1D.gif',writer='imagemagick')
