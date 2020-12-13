@@ -41,7 +41,7 @@ The plotting scripts are written in python. They can be found in the folder ./py
 
 ## One dimensional analytic solution Gif.
 
-Add Gif here.
+![image](results/analytical_1D.gif)
 
 ## Contributors
 
