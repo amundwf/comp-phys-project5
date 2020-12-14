@@ -13,12 +13,12 @@ import pandas as pd
 import os
 import re
 
-directory = "../results/2D_diffusion_before_enrichment/"
-#directory = "../results/2D_diffusion_after_enrichment/"
+#directory = "../results/2D_diffusion_before_enrichment/"
+directory = "../results/2D_diffusion_after_enrichment/"
    
-x_dim = 100
+x_dim = 120
 dt = 0.01
-dx = 0.01
+dx = 1
 
 for filename in os.listdir(directory):
     if filename.endswith(".txt"):
@@ -47,7 +47,7 @@ for filename in os.listdir(directory):
             # For some reason the y axis needs flipping.
             pcm = ax.pcolormesh(cube[i,::-1,:], cmap="viridis")
             cbar = fig.colorbar(pcm, ax = ax, format="%.1e")
-            cbar.set_label("Temperature /Kelvin")
+            cbar.set_label("Temperature / Kelvin")
             ax.set_title("t={:.2e}".format(i*dt))
             
             # Add white dashed lines for crust and mantle edge.
@@ -55,14 +55,14 @@ for filename in os.listdir(directory):
             ax.plot(x, y1, 'w--')
             
             # Axes labels
-            ax.set_ylabel("Depth /km")
-            ax.set_xlabel("Width /km")
+            ax.set_ylabel("Depth / $km$")
+            ax.set_xlabel("Width / $km$")
             
             # Next step.
             i+=step
             
             
-        fig.suptitle("{} solution to two-dimensional diffusion equation".format(name))
+        fig.suptitle("{} solution to the lithosphere problem before enrichment".format(name))
         fig.subplots_adjust(wspace=0.7, hspace=0.7)
         
         plt.savefig(directory + "{}_solution_before_enrichment.png".format(name))
