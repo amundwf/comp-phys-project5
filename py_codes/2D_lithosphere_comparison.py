@@ -13,10 +13,8 @@ import pandas as pd
 import os
 import re
 
-#directory = "../results/2D_diffusion_before_enrichment/"
-#directory = "../results/2D_diffusion_after_enrichment/"
-#directory = "../results/2D_diffusion/"
-directory = "../results/"
+
+directory = "../results/Temperature difference before and after/"
 
 
 # PLease enter the x dimension (Npoints) from the file you want

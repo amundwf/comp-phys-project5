@@ -16,9 +16,9 @@ directory = "../results/2D_diffusion/"
              
 # PLease enter the x dimension (Npoints) from the file you want
 # to load. 
-x_dim = 10
-dt = 1e-3
-dx = 0.1
+x_dim = 100
+dt = 5e-5
+dx = 0.01
 
 fig, axes = plt.subplots(3,2, figsize=(9,9), dpi = 80)
 axes = axes.flatten()
@@ -61,8 +61,8 @@ for filename in os.listdir(directory):
         fig1.suptitle("{} solution to two-dimensional diffusion equation".format(name))
         fig1.subplots_adjust(wspace=0.7, hspace=0.7)
         
-        plt.savefig(directory + "{}.png".format(filename))
-        plt.savefig(directory + "{}.pdf".format(filename))
+        fig1.savefig(directory + "{}.png".format(filename))
+        fig1.savefig(directory + "{}.pdf".format(filename))
         
         
         ################
@@ -81,7 +81,6 @@ for filename in os.listdir(directory):
             
 fig.subplots_adjust(wspace=0.7, hspace=0.7)
     
-
-plt.savefig(directory + "dx={}_dt={}.png".format(dx, dt))
-plt.savefig(directory + "dx={}_dt={}.pdf".format(dx, dt))     
+fig.savefig(directory + "dx={}_dt={}.png".format(dx, dt))
+fig.savefig(directory + "dx={}_dt={}.pdf".format(dx, dt))     
         
