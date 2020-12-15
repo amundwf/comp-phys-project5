@@ -39,6 +39,8 @@ Please note that the code runs with OpenMP for the two dimensional case and that
 
 The plotting scripts are written in python. They can be found in the folder ./py_codes. There are several options for one dimensional plotting or two dimensional plotting.
 
+Most of the raw data is too large in size to upload to github, therefore please look in the report methods section for the test parameters used.
+
 ## One dimensional analytic solution GIF animation.
 The following GIF shows the time development of the analytical solution as an animation. The animation starts at t=0 and continues until t=1.0.
 
