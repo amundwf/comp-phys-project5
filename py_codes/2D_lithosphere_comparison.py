@@ -79,7 +79,9 @@ plt.savefig(directory + "temp_diff.pdf")
 
 # Calculate some stats
 diff = temp_after[:,0] - temp_before
+diff1 = temp_after[:,1] - temp_before
 print ("The max difference is: ", diff.max())
+print ("The max difference after 1 Gy is: " ,diff1.max())
 print ("The mean and std difference in the mantle is: ", diff[40:].mean(), diff[40:].std())
 print("The max difference in the mantle is: ", diff[40:].max())
 
@@ -88,3 +90,4 @@ print("The mean difference and std from beginning to end in the mantle is: ", ev
 
 fig1, ax1 = plt.subplots(1,1, figsize=(9,9), dpi = 80)
 ax1.plot(np.linspace(40,120,80), evolution)
+
