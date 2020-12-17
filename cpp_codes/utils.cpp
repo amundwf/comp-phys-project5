@@ -910,7 +910,7 @@ void lithosphere(bool enrichment){
     cout << "The constant gamma is: " << gamma << endl;
 
 
-    double tolerance = 1.0e-14;
+    double tolerance = 1.0e-5;
     mat A = zeros<mat>(Npoints,Npoints);
     mat A_prev = zeros<mat>(Npoints,Npoints);
     cube results = cube(Npoints, Npoints, Tpoints);

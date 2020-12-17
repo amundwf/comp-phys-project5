@@ -21,6 +21,7 @@ directory = "../results/Temperature difference before and after/"
 # to load. 
 x_dim = 120
 dx = 1 #km
+dt = 0.0001
 
 fig, ax = plt.subplots(1,1, figsize=(9,9), dpi = 80)
 
@@ -52,10 +53,10 @@ for filename in os.listdir(directory):
             
             temp_after = np.zeros((x_dim, 2))
             j=0
-            times = [1,99]
+            times = [1,9999]
             for t in times:
 
-                ax.plot(x, cube[t,:,60], label = 'Time = {} $Gy$\nafter enrichment'.format(t*0.01))
+                ax.plot(x, cube[t,:,60], label = 'Time = {} $Gy$\nafter enrichment'.format(t*dt))
                 temp_after[:,j] = cube[t,:,60]
                 j+=1
 

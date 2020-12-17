@@ -13,12 +13,13 @@ import pandas as pd
 import os
 import re
 
-#directory = "../results/2D_diffusion_before_enrichment/"
-directory = "../results/2D_diffusion_after_enrichment/"
+directory = "../results/2D_diffusion_before_enrichment/"
+#directory = "../results/2D_diffusion_after_enrichment/"
    
 x_dim = 120
-dt = 0.01
+dt = 0.0001
 dx = 1
+enrich = "before"
 
 for filename in os.listdir(directory):
     if filename.endswith(".txt"):
@@ -62,9 +63,9 @@ for filename in os.listdir(directory):
             i+=step
             
             
-        fig.suptitle("{} solution to the lithosphere problem before enrichment".format(name))
+        fig.suptitle("{} solution to the lithosphere problem {} enrichment".format(name,enrich))
         fig.subplots_adjust(wspace=0.7, hspace=0.7)
         
-        plt.savefig(directory + "{}_solution_before_enrichment.png".format(name))
-        plt.savefig(directory + "{}_solution_before_enrichment.pdf".format(name))
+        plt.savefig(directory + "{}_solution_{}_enrichment.png".format(name,enrich))
+        plt.savefig(directory + "{}_solution_{}_enrichment.pdf".format(name, enrich))
 
